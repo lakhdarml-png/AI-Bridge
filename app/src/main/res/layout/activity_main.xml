@@ -1,8 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="24dp"
+    android:padding="16dp"
     android:background="@color/black"
     android:gravity="center_horizontal">
 
@@ -11,9 +12,28 @@
         android:layout_height="wrap_content"
         android:text="@string/bridge_ready"
         android:textColor="@color/gold"
-        android:textSize="24sp"
+        android:textSize="22sp"
         android:textStyle="bold"
-        android:layout_marginBottom="24dp"/>
+        android:layout_marginBottom="12dp"/>
+
+    <ScrollView
+        android:id="@+id/scrollConversation"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true"
+        android:layout_marginBottom="12dp">
+
+        <TextView
+            android:id="@+id/outputResponse"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/white"
+            android:textSize="15sp"
+            android:lineSpacingExtra="4dp"
+            android:padding="8dp"
+            android:textIsSelectable="true"/>
+    </ScrollView>
 
     <EditText
         android:id="@+id/inputRequest"
@@ -24,21 +44,15 @@
         android:textColorHint="#888888"
         android:backgroundTint="@color/gold"
         android:gravity="top|start"
-        android:minLines="3"
-        android:inputType="textMultiLine"/>
+        android:minLines="2"
+        android:maxLines="5"
+        android:inputType="textMultiLine|textCapSentences"
+        android:imeOptions="actionSend"/>
 
     <Button
         android:id="@+id/btnSend"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="إرسال إلى BridgeCore"
-        android:layout_marginTop="16dp"/>
-
-    <TextView
-        android:id="@+id/outputResponse"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textColor="@color/white"
-        android:textSize="16sp"
-        android:layout_marginTop="24dp"/>
+        android:layout_marginTop="10dp"/>
 </LinearLayout>
