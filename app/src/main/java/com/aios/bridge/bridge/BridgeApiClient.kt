@@ -28,7 +28,7 @@ class BridgeApiClient(context: Context) {
         executor.execute {
             var connection: HttpURLConnection? = null
             val message = try {
-                connection = (URL("$BASE_URL/api/tasks").openConnection() as HttpURLConnection).apply {
+                val conn = (URL("$BASE_URL/api/tasks").openConnection() as HttpURLConnection).apply {
                     requestMethod = "POST"
                     connectTimeout = 15000
                     readTimeout = 15000
@@ -37,13 +37,14 @@ class BridgeApiClient(context: Context) {
                     setRequestProperty("Content-Type", "application/json; charset=utf-8")
                     setRequestProperty("Accept", "application/json")
                 }
+                connection = conn
                 val body = JSONObject()
                     .put("goal", goal)
                     .put("project", "AI Bridge")
                     .toString()
-                connection.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
-                val code = connection.responseCode
-                val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+                conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+                val code = conn.responseCode
+                val stream = if (code in 200..299) conn.inputStream else conn.errorStream
                 val responseText = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
                 if (code in 200..299) {
                     val json = JSONObject(responseText)
