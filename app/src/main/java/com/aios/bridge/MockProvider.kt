@@ -7,9 +7,17 @@ class MockProvider : AIProvider {
     override val id: String = "mock"
 
     override fun generate(request: BridgeRequest): BridgeResponse {
+        val reply = buildString {
+            append("✅ تم استلام طلبك بنجاح.\n\n")
+            append("النص الذي أرسلته:\n")
+            append(request.text)
+            append("\n\n")
+            append("(هذا رد تجريبي من MockProvider — لاحقاً سيتم ربط ChatGPT / Grok / Gemini)")
+        }
         return BridgeResponse(
-            text = "AIOS Bridge استلم الطلب بنجاح: ${request.text}",
-            provider = id
+            text = reply,
+            provider = id,
+            success = true
         )
     }
 }
