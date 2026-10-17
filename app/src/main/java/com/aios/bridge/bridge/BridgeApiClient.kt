@@ -31,7 +31,7 @@ class BridgeApiClient(context: Context) {
                 val conn = (URL("$BASE_URL/api/tasks").openConnection() as HttpURLConnection).apply {
                     requestMethod = "POST"
                     connectTimeout = 15000
-                    readTimeout = 15000
+                    readTimeout = 65000
                     doOutput = true
                     setRequestProperty("Authorization", "Bearer $token")
                     setRequestProperty("Content-Type", "application/json; charset=utf-8")
@@ -49,7 +49,15 @@ class BridgeApiClient(context: Context) {
                 if (code in 200..299) {
                     val json = JSONObject(responseText)
                     val task = json.optJSONObject("task")
-                    "حُفظت المهمة في خادم الجسر. الحالة: ${task?.optString("status", "queued") ?: "queued"}\nرقم المهمة: ${task?.optString("id", "غير متاح") ?: "غير متاح"}"
+                    val status = task?.optString("status", "unknown") ?: "unknown"
+                    val id = task?.optString("id", "غير متاح") ?: "غير متاح"
+                    val result = task?.optString("result", "").orEmpty()
+                    when (status) {
+                        "completed" -> "اكتمل تحليل AI Bridge.\nرقم المهمة: $id\n\n${result.ifBlank { "لم يُرجع الخادم تفاصيل." }}"
+                        "waiting_input" -> "المهمة تنتظر إعدادًا مطلوبًا.\nرقم المهمة: $id\n\n${result.ifBlank { "تحقق من إعدادات الخادم." }}"
+                        "failed" -> "تعذر إكمال المهمة.\nرقم المهمة: $id\n\n${result.ifBlank { "لم يقدّم الخادم سببًا." }}"
+                        else -> "أُرسلت المهمة إلى الخادم. الحالة: $status\nرقم المهمة: $id\n\n$result"
+                    }
                 } else if (code == 401) {
                     "رفض الخادم رمز الدخول (401). راجع الرمز من إعداداتك دون إرساله إلى المحادثة."
                 } else {
