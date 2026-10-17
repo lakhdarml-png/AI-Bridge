@@ -2,12 +2,6 @@ name: Deploy AI Bridge Server
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ main ]
-    paths:
-      - 'server/**'
-      - 'wrangler.toml'
-      - '.github/workflows/deploy-server.yml'
 
 jobs:
   deploy:
