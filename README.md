@@ -1,36 +1,17 @@
-# AIOS v0.2 — AI Bridge
+# AI Bridge v0.3 — Local Task Planner
 
 Android-based local AI bridge foundation.
 
-## Architecture
-UI -> BridgeService -> BridgeCore -> AIProvider
+## Current features
+- Arabic-friendly task organization without network access.
+- Basic task categorization: development, research, writing, planning, or general.
+- Generates a small workflow and a handoff prompt for ChatGPT, Grok, or Gemini.
+- Keeps the existing send-and-display conversation flow.
+- Clearly identifies that no external AI model is called.
+- Existing provider abstraction remains available for future integrations.
 
-## Current foundation
-- Android app
-- BridgeService
-- BridgeCore
-- Provider abstraction
-- Offline MockProvider
-- Request/response models
-- Local memory abstraction
-- Tool permission boundary
-
-No API key is required for the current build.
+## Important limitation
+The local planner uses simple rules; it is not an LLM and does not generate expert answers. External model handoff currently requires opening an AI app and copying/pasting the prepared prompt. Direct integration requires an official supported interface or other permitted integration.
 
 ## Build
-Open the repository in Android Studio and sync Gradle, then run:
-
-gradle assembleDebug
-
-APK:
-app/build/outputs/apk/debug/app-debug.apk
-
-## Roadmap
-1. Stable core contract
-2. Context engine
-3. Persistent local memory
-4. Provider adapters
-5. Tool registry + explicit permissions
-6. Local HTTP API for other apps
-7. Error/fallback routing
-8. Production security hardening
+GitHub Actions builds the debug APK using `.github/workflows/build-apk.yml`.
