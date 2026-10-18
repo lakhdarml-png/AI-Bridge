@@ -2,7 +2,7 @@ name: Python tests
 
 on:
   push:
-    branches: ["main", "neo-local-core"]
+    branches: ["main", "neo-local-core", "neo-local-v0.2-tool-lab", "neo-local-v0.3-approved-runner"]
   pull_request:
 
 jobs:
