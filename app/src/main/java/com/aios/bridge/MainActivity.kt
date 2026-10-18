@@ -98,15 +98,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun armCaptureAndOpen(packageName: String, appName: String) {
+        lastCapturedText = null
         getSharedPreferences(ACCESSIBILITY_PREFS, Context.MODE_PRIVATE).edit()
             .putBoolean(KEY_CAPTURE_ENABLED, true)
             .putString(KEY_CAPTURE_PACKAGE, packageName)
             .putString(KEY_CAPTURED_TEXT, "")
             .apply()
 
-        appendSystem("تم تفعيل التقاط لمرة واحدة لـ $appName. سيحاول الجسر حفظ النص الظاهر بعد فتح التطبيق. تجنب الشاشات الحساسة.")
+        appendSystem("تم تفعيل التقاط لمرة واحدة لـ $appName. افتح الرد المطلوب واضغط زر خفض الصوت مرة واحدة لالتقاط النص الظاهر. تجنب الشاشات الحساسة.")
         openAiApp(packageName, appName)
-        Toast.makeText(this, "افتح المحادثة المطلوبة في $appName. إذا لم يُلتقط الرد، ارجع للجسر وأعد المحاولة بعد ظهور الرد.", Toast.LENGTH_LONG).show()
+        Toast.makeText(this, "افتح الرد المطلوب في $appName واضغط زر خفض الصوت مرة واحدة لالتقاط النص الظاهر.", Toast.LENGTH_LONG).show()
     }
 
     private fun openAiApp(packageName: String, appName: String) {
