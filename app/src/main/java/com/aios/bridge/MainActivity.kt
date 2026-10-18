@@ -2,174 +2,82 @@ package com.aios.bridge
 
 import android.content.ClipData
 import android.content.ClipboardManager
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.ServiceConnection
 import android.os.Bundle
-import android.os.IBinder
-import android.provider.Settings
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.aios.bridge.bridge.BridgeRequest
-import com.aios.bridge.bridge.BridgeService
 import com.aios.bridge.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
-    private var bridge: BridgeService? = null
-    private val conversation = StringBuilder()
-    private var lastCapturedText: String? = null
-
-    private val connection = object : ServiceConnection {
-        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-            bridge = (service as BridgeService.LocalBinder).service
-            binding.btnSend.isEnabled = true
-            appendSystem("الجسر المحلي جاهز. الردود المحلية ليست ردود نموذج ذكاء اصطناعي خارجي.")
-        }
-
-        override fun onServiceDisconnected(name: ComponentName?) {
-            bridge = null
-            binding.btnSend.isEnabled = false
-            appendSystem("انقطع الاتصال بخدمة الجسر.")
-        }
-    }
+    private val history = StringBuilder()
+    private var latestReply = ""
+    private var latestReplyFrom = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        binding.btnSend.isEnabled = false
-        binding.outputResponse.text = "جاري تهيئة الجسر..."
+        binding.outputResponse.text = "مرحبًا بك في AI Bridge الذكي.\n\n1) اكتب رسالتك وانسخها إلى أحد المساعدين.\n2) بعد أن يجيب، انسخ رده من تطبيقه.\n3) ارجع هنا واضغط «استلام رد...» لحفظه.\n4) أرسله للمساعد الآخر للمراجعة والتطوير.\n\nلا توجد خدمة إمكانية وصول مطلوبة."
 
-        val serviceIntent = Intent(this, BridgeService::class.java)
-        startService(serviceIntent)
-        bindService(serviceIntent, connection, BIND_AUTO_CREATE)
-
-        binding.btnSend.setOnClickListener { sendLocalMessage() }
-        binding.btnSendChatgpt.setOnClickListener { handoffDraft(CHATGPT_PACKAGE, "ChatGPT") }
-        binding.btnSendGrok.setOnClickListener { handoffDraft(GROK_PACKAGE, "Grok") }
-        binding.btnCaptureChatgpt.setOnClickListener { armCaptureAndOpen(CHATGPT_PACKAGE, "ChatGPT") }
-        binding.btnCaptureGrok.setOnClickListener { armCaptureAndOpen(GROK_PACKAGE, "Grok") }
-        binding.btnEnableAccessibility.setOnClickListener {
-            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-        }
+        binding.btnSendChatgpt.setOnClickListener { copyAndOpen(CHATGPT_PACKAGE, "ChatGPT") }
+        binding.btnSendGrok.setOnClickListener { copyAndOpen(GROK_PACKAGE, "Grok") }
+        binding.btnCaptureChatgpt.setOnClickListener { receiveClipboardReply("ChatGPT") }
+        binding.btnCaptureGrok.setOnClickListener { receiveClipboardReply("Grok") }
     }
 
-    override fun onResume() {
-        super.onResume()
-        showCapturedTextIfAvailable()
-    }
-
-    private fun sendLocalMessage() {
-        val text = binding.inputRequest.text.toString().trim()
-        if (text.isEmpty()) {
-            Toast.makeText(this, "اكتب رسالة أولاً", Toast.LENGTH_SHORT).show()
+    private fun copyAndOpen(packageName: String, appName: String) {
+        val draft = binding.inputRequest.text.toString().trim()
+        val text = if (draft.isNotEmpty()) draft else latestReply
+        if (text.isBlank()) {
+            toast("اكتب رسالة أو استلم ردًا أولًا.")
             return
         }
-
-        appendUser(text)
+        copyToClipboard(text)
+        addEntry(if (draft.isNotEmpty()) "رسالة منك → $appName" else "رد $latestReplyFrom → $appName", text)
         binding.inputRequest.text?.clear()
-
-        val service = bridge
-        if (service == null) {
-            appendSystem("الجسر غير جاهز بعد. انتظر قليلاً ثم أعد المحاولة.")
-            return
-        }
-
-        val response = service.handle(BridgeRequest(text))
-        if (response.success) appendAssistant(response.text, response.provider)
-        else appendSystem(response.text)
-    }
-
-    private fun handoffDraft(packageName: String, appName: String) {
-        val text = binding.inputRequest.text.toString().trim()
-        if (text.isEmpty()) {
-            Toast.makeText(this, "اكتب الرسالة التي تريد نقلها أولاً", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        clipboard.setPrimaryClip(ClipData.newPlainText("AI Bridge message", text))
-        appendUser("تم تجهيز رسالة لإرسالها إلى $appName:\n$text")
-        openAiApp(packageName, appName)
-        Toast.makeText(this, "نُسخت الرسالة. الصقها داخل $appName ثم أرسلها بنفسك.", Toast.LENGTH_LONG).show()
-    }
-
-    private fun armCaptureAndOpen(packageName: String, appName: String) {
-        lastCapturedText = null
-        getSharedPreferences(ACCESSIBILITY_PREFS, Context.MODE_PRIVATE).edit()
-            .putBoolean(KEY_CAPTURE_ENABLED, true)
-            .putString(KEY_CAPTURE_PACKAGE, packageName)
-            .putString(KEY_CAPTURED_TEXT, "")
-            .apply()
-
-        appendSystem("تم تفعيل التقاط لمرة واحدة لـ $appName. افتح الرد المطلوب واضغط زر خفض الصوت مرة واحدة لالتقاط النص الظاهر. تجنب الشاشات الحساسة.")
-        openAiApp(packageName, appName)
-        Toast.makeText(this, "افتح الرد المطلوب في $appName واضغط زر خفض الصوت مرة واحدة لالتقاط النص الظاهر.", Toast.LENGTH_LONG).show()
-    }
-
-    private fun openAiApp(packageName: String, appName: String) {
         val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
         if (launchIntent == null) {
-            Toast.makeText(this, "لم أجد تطبيق $appName بهذا المعرّف. تأكد من تثبيته وتحديثه.", Toast.LENGTH_LONG).show()
+            toast("لم أجد تطبيق $appName. تأكد أنه مثبت على الهاتف.")
             return
         }
-        runCatching { startActivity(launchIntent) }
-            .onFailure { Toast.makeText(this, "تعذر فتح $appName: " + it.message, Toast.LENGTH_LONG).show() }
+        startActivity(launchIntent)
+        toast("نُسخ النص. الصقه في $appName ثم اضغط إرسال.")
     }
 
-    private fun showCapturedTextIfAvailable() {
-        val prefs = getSharedPreferences(ACCESSIBILITY_PREFS, Context.MODE_PRIVATE)
-        val captured = prefs.getString(KEY_CAPTURED_TEXT, null)?.trim().orEmpty()
-        if (captured.isBlank() || captured == lastCapturedText) return
-
-        val packageName = prefs.getString(KEY_CAPTURED_PACKAGE, "").orEmpty()
-        val appName = when (packageName) {
-            CHATGPT_PACKAGE -> "ChatGPT"
-            GROK_PACKAGE -> "Grok"
-            else -> "التطبيق"
+    private fun receiveClipboardReply(from: String) {
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val text = if (clipboard.hasPrimaryClip()) clipboard.primaryClip?.getItemAt(0)?.coerceToText(this)?.toString()?.trim().orEmpty() else ""
+        if (text.isBlank()) {
+            toast("انسخ آخر رد من $from أولًا، ثم ارجع واضغط هذا الزر.")
+            return
         }
-        lastCapturedText = captured
-        appendAssistant("النص الظاهر الذي التقطه الجسر من $appName:\n$captured", "التقاط محلي")
-        prefs.edit().putString(KEY_CAPTURED_TEXT, "").apply()
+        latestReply = text
+        latestReplyFrom = from
+        addEntry("آخر رد من $from — محفوظ من الحافظة", text)
+        binding.inputRequest.setText("راجع رد $from التالي، وحدد نقاط القوة والضعف، ثم اقترح تحسينًا واضحًا دون تكرار غير ضروري:\n\n$text")
+        toast("تم استلام الرد وحفظه داخل سجل الجلسة.")
     }
 
-    private fun appendUser(text: String) {
-        conversation.append("أنت:\n$text\n\n")
-        updateConversation()
+    private fun copyToClipboard(text: String) {
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText("AI Bridge", text))
     }
 
-    private fun appendAssistant(text: String, provider: String) {
-        conversation.append("$provider:\n$text\n\n")
-        updateConversation()
-    }
-
-    private fun appendSystem(text: String) {
-        conversation.append("— $text —\n\n")
-        updateConversation()
-    }
-
-    private fun updateConversation() {
-        binding.outputResponse.text = conversation.toString()
+    private fun addEntry(title: String, text: String) {
+        history.append("【").append(title).append("】\n").append(text).append("\n\n")
+        binding.outputResponse.text = history.toString()
         binding.scrollConversation.post {
             binding.scrollConversation.fullScroll(android.view.View.FOCUS_DOWN)
         }
     }
 
-    override fun onDestroy() {
-        runCatching { unbindService(connection) }
-        super.onDestroy()
-    }
+    private fun toast(message: String) = Toast.makeText(this, message, Toast.LENGTH_LONG).show()
 
     companion object {
         private const val CHATGPT_PACKAGE = "com.openai.chatgpt"
         private const val GROK_PACKAGE = "ai.x.grok"
-        const val ACCESSIBILITY_PREFS = "ai_bridge_accessibility"
-        const val KEY_CAPTURE_ENABLED = "capture_enabled"
-        const val KEY_CAPTURE_PACKAGE = "capture_package"
-        const val KEY_CAPTURED_TEXT = "captured_text"
-        const val KEY_CAPTURED_PACKAGE = "captured_package"
     }
 }
