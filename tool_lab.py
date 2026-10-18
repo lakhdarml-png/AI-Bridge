@@ -1,21 +1,19 @@
 #!/usr/bin/env python3
-"""NEO-LOCAL v0.2 tool lab.
+"""NEO-LOCAL v0.3 approved tool runner.
 
 Candidates are declarative JSON manifests, never Python source. Only operations
-implemented in this file can run. This avoids treating a folder as a sandbox.
+implemented in this file can run. This is not a general-purpose code sandbox.
 """
 from __future__ import annotations
 
 import argparse
 import json
 import re
-import shutil
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-HOME = Path(__file__).resolve().parent
 STATE = Path.home() / ".neo_local" / "tool_lab"
 CANDIDATES = STATE / "candidates"
 APPROVED = STATE / "approved"
@@ -40,6 +38,10 @@ def paths() -> None:
 def audit(action: str, name: str, detail: str = "") -> None:
     paths()
     AUDIT.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    try:
+        AUDIT.chmod(0o600)
+    except OSError:
+        pass
     with AUDIT.open("a", encoding="utf-8") as stream:
         stream.write(json.dumps({"time": stamp(), "action": action, "name": name, "detail": detail}, ensure_ascii=False) + "\n")
 
@@ -68,17 +70,17 @@ def validate(manifest: dict[str, Any]) -> None:
         raise ValueError("operation is not in the built-in allowlist")
     if not isinstance(manifest.get("sample_input"), str) or len(manifest["sample_input"]) > 4000:
         raise ValueError("sample_input must be text of at most 4000 characters")
-    if not isinstance(manifest.get("expected"), (str, dict, int, list)) and manifest.get("expected") is not None:
+    expected = manifest.get("expected")
+    if isinstance(expected, bool) or not isinstance(expected, (str, dict, int, list, type(None))):
         raise ValueError("unsupported expected result type")
     options = manifest.get("options", {})
     if not isinstance(options, dict):
         raise ValueError("options must be an object")
-    # Exercise the operation and validate its arguments without executing candidate code.
     apply_operation(manifest["operation"], manifest["sample_input"], options)
 
 
 def candidate_path(name: str) -> Path:
-    if not NAME_RE.fullmatch(name):
+    if not isinstance(name, str) or not NAME_RE.fullmatch(name):
         raise ValueError("invalid tool name")
     return CANDIDATES / f"{name}.json"
 
@@ -91,10 +93,12 @@ def load_manifest(path: Path) -> dict[str, Any]:
 
 def create(name: str, operation: str, sample: str, limit: int) -> Path:
     paths()
-    if not NAME_RE.fullmatch(name):
+    if not isinstance(name, str) or not NAME_RE.fullmatch(name):
         raise ValueError("name must start with a lowercase letter and contain only a-z, 0-9, _")
     if operation not in OPERATIONS:
         raise ValueError(f"operation must be one of: {', '.join(sorted(OPERATIONS))}")
+    if not isinstance(sample, str) or len(sample) > 4000:
+        raise ValueError("sample must be text of at most 4000 characters")
     options = {"limit": limit} if operation == "prefix" else {}
     expected = apply_operation(operation, sample, options)
     manifest = {
@@ -132,7 +136,7 @@ def approve(name: str) -> Path:
     folder = APPROVED / name
     folder.mkdir(parents=True, exist_ok=True, mode=0o700)
     versions = sorted(folder.glob("v*.json"))
-    version = (max((int(p.stem[1:]) for p in versions if p.stem[1:].isdigit()), default=0) + 1)
+    version = max((int(p.stem[1:]) for p in versions if p.stem[1:].isdigit()), default=0) + 1
     manifest["version"] = version
     manifest["status"] = "approved"
     manifest["approved_at"] = stamp()
@@ -143,14 +147,53 @@ def approve(name: str) -> Path:
     return target
 
 
-def rollback(name: str) -> Path:
+def active_manifest(name: str) -> tuple[dict[str, Any], Path]:
+    if not isinstance(name, str) or not NAME_RE.fullmatch(name):
+        raise ValueError("invalid tool name")
     folder = APPROVED / name
-    if not NAME_RE.fullmatch(name) or not folder.is_dir():
+    active_file = folder / "active.json"
+    if not active_file.is_file():
+        raise ValueError("tool has no active approved version")
+    version_name = active_file.read_text(encoding="utf-8").strip()
+    if not re.fullmatch(r"v[1-9][0-9]*\.json", version_name):
+        raise ValueError("invalid active version pointer")
+    version_path = folder / version_name
+    if not version_path.is_file():
+        raise ValueError("active version file is missing")
+    manifest = load_manifest(version_path)
+    if manifest.get("name") != name or manifest.get("status") != "approved":
+        raise ValueError("active manifest is not approved for this tool")
+    if manifest.get("version") != int(version_name[1:-5]):
+        raise ValueError("active manifest version does not match its filename")
+    return manifest, version_path
+
+
+def run_approved(name: str, text: str) -> Any:
+    if not isinstance(text, str) or len(text) > 4000:
+        raise ValueError("input must be text of at most 4000 characters")
+    manifest, path = active_manifest(name)
+    try:
+        result = apply_operation(manifest["operation"], text, manifest.get("options"))
+    except Exception:
+        audit("run", name, f"{path.name}:failed")
+        raise
+    audit("run", name, f"{path.name}:passed")
+    return result
+
+
+def rollback(name: str) -> Path:
+    if not isinstance(name, str) or not NAME_RE.fullmatch(name):
+        raise ValueError("invalid tool name")
+    folder = APPROVED / name
+    if not folder.is_dir():
         raise ValueError("no approved tool with that name")
     versions = sorted((p for p in folder.glob("v*.json") if p.stem[1:].isdigit()), key=lambda p: int(p.stem[1:]))
     if len(versions) < 2:
         raise ValueError("rollback needs at least two approved versions")
     target = versions[-2]
+    manifest = load_manifest(target)
+    if manifest.get("name") != name or manifest.get("status") != "approved":
+        raise ValueError("previous version is not a valid approved manifest")
     (folder / "active.json").write_text(target.name + "\n", encoding="utf-8")
     audit("rollback", name, target.stem)
     return target
@@ -172,7 +215,11 @@ def list_tools() -> None:
     found = False
     for active in sorted(APPROVED.glob("*/active.json")):
         found = True
-        print(f"  {active.parent.name}: {active.read_text(encoding='utf-8').strip()}")
+        try:
+            manifest, version_path = active_manifest(active.parent.name)
+            print(f"  {active.parent.name}: {version_path.name} [{manifest['operation']}]")
+        except (OSError, ValueError, json.JSONDecodeError):
+            print(f"  {active.parent.name}: INVALID active version")
     if not found:
         print("  (none)")
 
@@ -191,6 +238,9 @@ def main(argv: list[str] | None = None) -> int:
     promotion.add_argument("name")
     rb = sub.add_parser("rollback", help="point active version to the previous approved version")
     rb.add_argument("name")
+    run = sub.add_parser("run", help="run the active approved tool on text")
+    run.add_argument("name")
+    run.add_argument("text")
     sub.add_parser("list", help="list candidates and active approved versions")
     args = parser.parse_args(argv)
     try:
@@ -203,6 +253,9 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Approved version saved: {approve(args.name)}")
         elif args.command == "rollback":
             print(f"Active version switched to: {rollback(args.name)}")
+        elif args.command == "run":
+            result = run_approved(args.name, args.text)
+            print(json.dumps(result, ensure_ascii=False))
         elif args.command == "list":
             list_tools()
         return 0
