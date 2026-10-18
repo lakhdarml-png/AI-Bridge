@@ -20,7 +20,17 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        binding.outputResponse.text = "مرحبًا بك في AI Bridge الذكي.\n\n1) اكتب رسالتك وانسخها إلى أحد المساعدين.\n2) بعد أن يجيب، انسخ رده من تطبيقه.\n3) ارجع هنا واضغط «استلام رد...» لحفظه.\n4) أرسله للمساعد الآخر للمراجعة والتطوير.\n\nلا توجد خدمة إمكانية وصول مطلوبة."
+        // رسالة ترحيب واضحة ومختصرة
+        binding.outputResponse.text = """
+            |مرحبًا بك في AI Bridge الذكي
+            |
+            |1) اكتب رسالتك وانسخها إلى أحد المساعدين.
+            |2) بعد أن يجيب، انسخ رده من تطبيقه.
+            |3) ارجع هنا واضغط «استلام رد...» لحفظه.
+            |4) أرسله للمساعد الآخر للمراجعة والتطوير.
+            |
+            |كل رد سيظهر بوضوح مع اسم المساعد.
+        """.trimMargin()
 
         binding.btnSendChatgpt.setOnClickListener { copyAndOpen(CHATGPT_PACKAGE, "ChatGPT") }
         binding.btnSendGrok.setOnClickListener { copyAndOpen(GROK_PACKAGE, "Grok") }
@@ -36,7 +46,8 @@ class MainActivity : AppCompatActivity() {
             return
         }
         copyToClipboard(text)
-        addEntry(if (draft.isNotEmpty()) "رسالة منك → $appName" else "رد $latestReplyFrom → $appName", text)
+        val title = if (draft.isNotEmpty()) "أنت → $appName" else "رد $latestReplyFrom → $appName"
+        addEntry(title, text)
         binding.inputRequest.text?.clear()
         val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
         if (launchIntent == null) {
@@ -49,16 +60,24 @@ class MainActivity : AppCompatActivity() {
 
     private fun receiveClipboardReply(from: String) {
         val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        val text = if (clipboard.hasPrimaryClip()) clipboard.primaryClip?.getItemAt(0)?.coerceToText(this)?.toString()?.trim().orEmpty() else ""
+        val text = if (clipboard.hasPrimaryClip()) {
+            clipboard.primaryClip?.getItemAt(0)?.coerceToText(this)?.toString()?.trim().orEmpty()
+        } else ""
+
         if (text.isBlank()) {
             toast("انسخ آخر رد من $from أولًا، ثم ارجع واضغط هذا الزر.")
             return
         }
+
         latestReply = text
         latestReplyFrom = from
-        addEntry("آخر رد من $from — محفوظ من الحافظة", text)
-        binding.inputRequest.setText("راجع رد $from التالي، وحدد نقاط القوة والضعف، ثم اقترح تحسينًا واضحًا دون تكرار غير ضروري:\n\n$text")
-        toast("تم استلام الرد وحفظه داخل سجل الجلسة.")
+        addEntry("رد من $from", text)
+
+        // تجهيز نص مراجعة جاهز للنقل للمساعد الآخر
+        binding.inputRequest.setText(
+            "راجع رد $from التالي، وحدد نقاط القوة والضعف، ثم اقترح تحسينًا واضحًا دون تكرار غير ضروري:\n\n$text"
+        )
+        toast("تم استلام رد $from وحفظه في السجل.")
     }
 
     private fun copyToClipboard(text: String) {
@@ -67,7 +86,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun addEntry(title: String, text: String) {
-        history.append("【").append(title).append("】\n").append(text).append("\n\n")
+        history.append("━━━━━━━━━━━━━━━━━━━━\n")
+        history.append("【 $title 】\n")
+        history.append(text.trim())
+        history.append("\n\n")
         binding.outputResponse.text = history.toString()
         binding.scrollConversation.post {
             binding.scrollConversation.fullScroll(android.view.View.FOCUS_DOWN)
