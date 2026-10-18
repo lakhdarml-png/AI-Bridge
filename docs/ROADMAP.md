@@ -25,8 +25,8 @@
 - [x] Require the tool to have an active approved version
 - [x] Save results and terminal status to SQLite
 - [x] Prevent rerunning completed or failed tasks
-- [x] Tests for success, failure, and duplicate execution
-- [ ] Recovery command for tasks left running after a process interruption
+- [x] Recover stale running tasks as failed without resuming them
+- [x] Tests for success, failure, duplicate execution, and recovery
 
 ## Later
 - [ ] Provider-neutral adapter (optional; local core does not require an API)
