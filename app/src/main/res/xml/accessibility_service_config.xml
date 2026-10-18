@@ -5,4 +5,5 @@
     android:accessibilityFlags="flagRequestFilterKeyEvents"
     android:notificationTimeout="300"
     android:canRetrieveWindowContent="true"
+    android:canRequestFilterKeyEvents="true"
     android:description="@string/bridge_instructions" />
