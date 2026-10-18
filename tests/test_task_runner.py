@@ -1,7 +1,7 @@
 import json
-import os
 import tempfile
 import unittest
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -68,6 +68,21 @@ class TaskRunnerTests(unittest.TestCase):
     def test_missing_task_rejected(self):
         with self.assertRaises(ValueError):
             task_runner.execute_task(999, "count_demo", "x")
+
+    def test_recover_only_old_running_tasks_and_never_resumes_them(self):
+        task_id = core.add_task("Possibly interrupted")
+        old = (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat(timespec="seconds")
+        with core.connect() as db:
+            db.execute("UPDATE tasks SET status='running', updated_at=? WHERE id=?", (old, task_id))
+        count = task_runner.recover_stale_tasks(older_than_minutes=60)
+        row = self.task_status(task_id)
+        self.assertEqual(count, 1)
+        self.assertEqual(row["status"], "failed")
+        self.assertIn("left running", row["result"])
+
+    def test_recovery_rejects_unreasonable_threshold(self):
+        with self.assertRaises(ValueError):
+            task_runner.recover_stale_tasks(0)
 
 
 if __name__ == "__main__":
