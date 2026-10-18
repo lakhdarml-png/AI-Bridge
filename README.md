@@ -32,7 +32,13 @@ python task_runner.py run 1 count_demo "hello world"
 python core.py status
 ```
 
-Replace `1` with the ID printed when your task was created. A successful run saves the result and marks the task completed. A failed run marks it failed. A task that is not queued cannot run again. No arbitrary shell or generated Python is executed.
+Replace `1` with the ID printed when the task was created. Success saves the result and marks the task completed; failure marks it failed. Terminal tasks cannot be run again.
+
+If Termux or Python is interrupted and leaves a task in `running`, inspect the list first, then explicitly mark tasks older than one hour as failed:
+```bash
+python task_runner.py recover --older-than-minutes 60
+```
+Recovery never resumes or executes tasks. The threshold can be 1 to 10080 minutes.
 
 ## Security boundary
 This is a guarded local workflow, not an OS-level sandbox. Do not pass private information to tools unless you intend to process it locally. The local SQLite database is not encrypted by this program.
