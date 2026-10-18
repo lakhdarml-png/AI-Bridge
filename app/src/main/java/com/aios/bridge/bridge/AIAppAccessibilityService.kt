@@ -2,55 +2,55 @@ package com.aios.bridge.bridge
 
 import android.accessibilityservice.AccessibilityService
 import android.content.Context
+import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
-import android.os.Handler
-import android.os.Looper
 import com.aios.bridge.MainActivity
 import java.util.ArrayDeque
 
 /**
- * User-enabled service. It captures visible, non-editable text only after the
- * user arms a one-shot capture from AI Bridge for a specific target package.
+ * User-enabled service. It captures visible, non-editable text only when the
+ * user arms capture in AI Bridge and presses Volume Down while the selected
+ * AI app is in the foreground.
  */
 class AIAppAccessibilityService : AccessibilityService() {
-    private val handler = Handler(Looper.getMainLooper())
-    private var pendingPackage: String? = null
-    private val captureRunnable = Runnable { captureCurrentWindow() }
+    private var targetPackage: String? = null
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
         val prefs = getSharedPreferences(MainActivity.ACCESSIBILITY_PREFS, Context.MODE_PRIVATE)
-        if (!prefs.getBoolean(MainActivity.KEY_CAPTURE_ENABLED, false)) return
+        if (!prefs.getBoolean(MainActivity.KEY_CAPTURE_ENABLED, false)) {
+            targetPackage = null
+            return
+        }
 
         val target = prefs.getString(MainActivity.KEY_CAPTURE_PACKAGE, null) ?: return
-        val eventPackage = event.packageName?.toString() ?: return
-        if (eventPackage != target) return
-
-        pendingPackage = target
-        handler.removeCallbacks(captureRunnable)
-        // Wait for the screen to settle instead of reading every UI change.
-        handler.postDelayed(captureRunnable, 900L)
+        if (event.packageName?.toString() == target) targetPackage = target
     }
 
-    private fun captureCurrentWindow() {
-        val target = pendingPackage ?: return
-        val prefs = getSharedPreferences(MainActivity.ACCESSIBILITY_PREFS, Context.MODE_PRIVATE)
-        if (!prefs.getBoolean(MainActivity.KEY_CAPTURE_ENABLED, false)) return
-        if (prefs.getString(MainActivity.KEY_CAPTURE_PACKAGE, null) != target) return
+    override fun onKeyEvent(event: KeyEvent): Boolean {
+        if (event.action != KeyEvent.ACTION_DOWN || event.keyCode != KeyEvent.KEYCODE_VOLUME_DOWN) {
+            return false
+        }
 
-        val root = rootInActiveWindow ?: return
-        if (root.packageName?.toString() != target) return
+        val prefs = getSharedPreferences(MainActivity.ACCESSIBILITY_PREFS, Context.MODE_PRIVATE)
+        if (!prefs.getBoolean(MainActivity.KEY_CAPTURE_ENABLED, false)) return false
+
+        val target = prefs.getString(MainActivity.KEY_CAPTURE_PACKAGE, null) ?: return false
+        val root = rootInActiveWindow ?: return false
+        if (root.packageName?.toString() != target || targetPackage != target) return false
 
         val text = collectVisibleText(root)
-        if (text.isBlank()) return
+        if (text.isBlank()) return false
 
         prefs.edit()
             .putString(MainActivity.KEY_CAPTURED_TEXT, text.take(MAX_CAPTURE_CHARS))
             .putString(MainActivity.KEY_CAPTURED_PACKAGE, target)
             .putBoolean(MainActivity.KEY_CAPTURE_ENABLED, false)
             .apply()
-        pendingPackage = null
+        targetPackage = null
+        // Consume the key only when it successfully captured the selected app.
+        return true
     }
 
     private fun collectVisibleText(root: AccessibilityNodeInfo): String {
@@ -76,13 +76,7 @@ class AIAppAccessibilityService : AccessibilityService() {
     }
 
     override fun onInterrupt() {
-        handler.removeCallbacks(captureRunnable)
-        pendingPackage = null
-    }
-
-    override fun onDestroy() {
-        handler.removeCallbacks(captureRunnable)
-        super.onDestroy()
+        targetPackage = null
     }
 
     companion object {
