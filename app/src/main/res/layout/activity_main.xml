@@ -2,50 +2,51 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/black"
+    android:background="#121212"
     android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="16dp"
-        android:gravity="center_horizontal">
+        android:layoutDirection="rtl">
 
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/bridge_ready"
+            android:text="AI Bridge | الجسر الذكي"
             android:textColor="@color/gold"
-            android:textSize="22sp"
+            android:textSize="24sp"
             android:textStyle="bold"
+            android:gravity="center"
             android:layout_marginBottom="8dp" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/bridge_instructions"
-            android:textColor="@color/white"
+            android:text="انسخ الرد من المساعد، استلمه هنا، ثم انقله للمساعد الآخر. يحتفظ الجسر بسجل الجلسة ويرتب جولات التعاون."
+            android:textColor="#DDDDDD"
             android:textSize="14sp"
             android:lineSpacingExtra="3dp"
-            android:layout_marginBottom="10dp" />
+            android:layout_marginBottom="12dp" />
 
         <ScrollView
             android:id="@+id/scrollConversation"
             android:layout_width="match_parent"
-            android:layout_height="280dp"
+            android:layout_height="300dp"
             android:fillViewport="true"
             android:background="#1E1E1E"
-            android:layout_marginBottom="10dp">
+            android:layout_marginBottom="12dp">
 
             <TextView
                 android:id="@+id/outputResponse"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="@color/white"
+                android:textColor="#FFFFFF"
                 android:textSize="15sp"
                 android:lineSpacingExtra="4dp"
-                android:padding="8dp"
+                android:padding="12dp"
                 android:textIsSelectable="true" />
         </ScrollView>
 
@@ -53,70 +54,50 @@
             android:id="@+id/inputRequest"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="اكتب رسالة لنقلها إلى أحد المساعدين"
-            android:textColor="@color/white"
-            android:textColorHint="#888888"
+            android:hint="اكتب الرسالة أو تعليمات مراجعة الرد..."
+            android:textColor="#FFFFFF"
+            android:textColorHint="#999999"
             android:backgroundTint="@color/gold"
             android:gravity="top|start"
-            android:minLines="2"
-            android:maxLines="5"
+            android:minLines="3"
+            android:maxLines="8"
             android:inputType="textMultiLine|textCapSentences"
-            android:imeOptions="actionSend" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="8dp">
-            <Button
-                android:id="@+id/btnSendChatgpt"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="نسخ وفتح ChatGPT"
-                android:textAllCaps="false" />
-            <Button
-                android:id="@+id/btnSendGrok"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="نسخ وفتح Grok"
-                android:textAllCaps="false" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-            <Button
-                android:id="@+id/btnCaptureChatgpt"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="التقاط من ChatGPT"
-                android:textAllCaps="false" />
-            <Button
-                android:id="@+id/btnCaptureGrok"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="التقاط من Grok"
-                android:textAllCaps="false" />
-        </LinearLayout>
+            android:layout_marginBottom="8dp" />
 
         <Button
-            android:id="@+id/btnEnableAccessibility"
+            android:id="@+id/btnSendChatgpt"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="تفعيل خدمة الالتقاط من إعدادات Android"
+            android:text="نسخ النص وفتح ChatGPT"
             android:textAllCaps="false" />
 
         <Button
-            android:id="@+id/btnSend"
+            android:id="@+id/btnCaptureChatgpt"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="معالجة محلية (ليست نموذج ذكاء اصطناعي)"
-            android:textAllCaps="false"
-            android:layout_marginTop="4dp" />
+            android:text="استلام آخر رد من ChatGPT (بعد نسخه)"
+            android:textAllCaps="false" />
+
+        <Button
+            android:id="@+id/btnSendGrok"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="نسخ النص وفتح Grok"
+            android:textAllCaps="false" />
+
+        <Button
+            android:id="@+id/btnCaptureGrok"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="استلام آخر رد من Grok (بعد نسخه)"
+            android:textAllCaps="false" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="مهم: النسخ واللصق والإرسال داخل ChatGPT وGrok يتم بواسطتك. لا يحتاج التطبيق إلى إذن إمكانية الوصول أو مفتاح API."
+            android:textColor="#BBBBBB"
+            android:textSize="12sp"
+            android:layout_marginTop="8dp" />
     </LinearLayout>
 </ScrollView>
