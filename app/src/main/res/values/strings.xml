@@ -1,6 +1,0 @@
-<resources>
-    <string name="app_name">AI Bridge</string>
-    <string name="bridge_ready">AI Bridge — الجسر الذكي</string>
-    <string name="bridge_instructions">انسخ الرد من المساعد، استلمه هنا، ثم انقله للمساعد الآخر.</string>
-    <string name="accessibility_service_description">تسمح هذه الخدمة لـ AI Bridge بقراءة آخر رد ظاهر داخل تطبيقي ChatGPT وGrok لتسهيل نقل المحادثة بينهما. لا ترسل أي بيانات خارج هاتفك.</string>
-</resources>
