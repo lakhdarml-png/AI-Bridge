@@ -9,27 +9,30 @@ python core.py status
 python -m unittest discover -s tests -v
 ```
 
-## v0.2/v0.3 safe tool lab
-The tool lab accepts **declarative JSON manifests**, not generated Python source. It only runs operations already implemented in an explicit allowlist. A separate folder is not a security sandbox, so arbitrary candidate code is deliberately not executed.
+## Safe tool lab
+Candidates are declarative JSON manifests, not generated Python source. Only operations in the built-in allowlist can run.
 
-Create, test, and explicitly approve a candidate:
 ```bash
 python tool_lab.py create count_demo --operation word_count --sample "hello world"
 python tool_lab.py test count_demo
 python tool_lab.py approve count_demo
 python tool_lab.py list
-```
-
-Supported operations: `word_count`, `uppercase`, `prefix`. The prefix operation accepts `--limit 1..500`.
-
-**Run only the active approved version** (input is limited to 4000 characters):
-```bash
 python tool_lab.py run count_demo "hello from NEO-LOCAL"
 ```
 
-Approved versions are stored under `~/.neo_local/tool_lab/approved/`; candidates and an audit log are stored under `~/.neo_local/tool_lab/`. Approval is explicit. Rollback switches the active-version pointer to the previous approved manifest:
+Supported operations: `word_count`, `uppercase`, `prefix`. Inputs are limited to 4000 characters. Only the active approved version runs; approval is explicit and rollback is available.
+
+## Explicit task execution
+Tasks are never run automatically. Create a task, inspect the task list, and explicitly select an approved tool and input:
+
 ```bash
-python tool_lab.py rollback count_demo
+python core.py task "Count words in a text"
+python task_runner.py list
+python task_runner.py run 1 count_demo "hello world"
+python core.py status
 ```
 
-The runner validates the active pointer and approved manifest before every run. This does **not** dynamically load or execute newly generated code; expanding the operation allowlist requires a reviewed code change and tests.
+Replace `1` with the ID printed when your task was created. A successful run saves the result and marks the task completed. A failed run marks it failed. A task that is not queued cannot run again. No arbitrary shell or generated Python is executed.
+
+## Security boundary
+This is a guarded local workflow, not an OS-level sandbox. Do not pass private information to tools unless you intend to process it locally. The local SQLite database is not encrypted by this program.
