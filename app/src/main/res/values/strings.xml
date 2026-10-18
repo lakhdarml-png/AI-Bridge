@@ -1,6 +1,5 @@
 <resources>
     <string name="app_name">AI Bridge</string>
-    <string name="bridge_ready">AI Bridge — اختبار الربط</string>
-    <string name="bridge_instructions">انقل الرسالة إلى ChatGPT أو Grok عبر النسخ، ثم الصقها وأرسلها بنفسك. بعد تفعيل الخدمة، افتح الرد المطلوب واضغط زر خفض الصوت مرة واحدة لالتقاط النص الظاهر فقط. تجنب الشاشات الحساسة.</string>
-    <string name="accessibility_service_label">AI Bridge — التقاط نص ظاهر بطلب المستخدم</string>
+    <string name="bridge_ready">AI Bridge — الجسر الذكي</string>
+    <string name="bridge_instructions">انسخ الرد من المساعد، استلمه هنا، ثم انقله للمساعد الآخر.</string>
 </resources>
