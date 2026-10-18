@@ -10,7 +10,7 @@ import argparse
 import json
 import sqlite3
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import core
@@ -31,6 +31,23 @@ def list_tasks() -> None:
         return
     for row in rows:
         print(f"#{row['id']} [{row['status']}] {row['goal']}")
+
+
+def recover_stale_tasks(older_than_minutes: int = 60) -> int:
+    """Explicitly mark long-stuck running tasks failed; never resumes them."""
+    if not isinstance(older_than_minutes, int) or isinstance(older_than_minutes, bool) or not 1 <= older_than_minutes <= 10080:
+        raise ValueError("older-than-minutes must be between 1 and 10080")
+    cutoff = (datetime.now(timezone.utc) - timedelta(minutes=older_than_minutes)).isoformat(timespec="seconds")
+    stamp = now()
+    with core.connect() as db:
+        cur = db.execute(
+            """UPDATE tasks
+               SET status='failed', result=?, updated_at=?
+               WHERE status='running' AND updated_at < ?""",
+            ("Recovered as failed: task was left running after an interruption.", stamp, cutoff),
+        )
+        count = cur.rowcount
+    return count
 
 
 def execute_task(task_id: int, tool_name: str, input_text: str) -> Any:
@@ -80,6 +97,8 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("task_id", type=int)
     run.add_argument("tool_name")
     run.add_argument("input_text")
+    recover = sub.add_parser("recover", help="mark old interrupted running tasks as failed; never resumes them")
+    recover.add_argument("--older-than-minutes", type=int, default=60)
     args = parser.parse_args(argv)
     try:
         core.init_db()
@@ -88,6 +107,9 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "run":
             result = execute_task(args.task_id, args.tool_name, args.input_text)
             print(json.dumps(result, ensure_ascii=False))
+        elif args.command == "recover":
+            count = recover_stale_tasks(args.older_than_minutes)
+            print(f"Recovered {count} stale task(s) as failed.")
         return 0
     except (OSError, sqlite3.Error, ValueError, json.JSONDecodeError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
