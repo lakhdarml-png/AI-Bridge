@@ -1,41 +1,35 @@
-# NEO-LOCAL Core v0.1
+# NEO-LOCAL Core
 
-نواة وكيل محلي للهاتف تبدأ من Termux، بذاكرة SQLite، وسجل مهام، وأدوات محددة، واختبارات أساسية. لا يحتاج هذا الإصدار إلى API أو اشتراك أو مكتبات خارجية.
+Local-first Python and SQLite kernel for Android/Termux. No API and no third-party Python dependencies.
 
-## المبدأ
-- محلي أولاً: قاعدة البيانات والمهام تبقى على الجهاز.
-- مستقل عن المزود: طبقة API غير مضافة بعد.
-- لا تنفيذ تلقائي لكود مولّد: الأدوات الجديدة تُفحص وتُختبر قبل اعتمادها.
-- أقل صلاحيات: الإصدار الأول يشغّل أدوات مدمجة محددة فقط، ولا ينفّذ أوامر shell عشوائية.
-- قابل للاختبار: اختبارات Python مدمجة دون اعتماديات خارجية.
-
-## التشغيل على Termux
+## Core
 ```bash
-pkg update -y
-pkg install python git -y
-git clone https://github.com/lakhdarml-png/AI-Bridge.git neo-local
-cd neo-local
 python core.py init
 python core.py status
-python core.py task "اختبار النواة المحلية"
-python core.py remember "القاعدة الأولى" "لا تشغّل كوداً جديداً قبل اختباره"
-python core.py recall "القاعدة"
 python -m unittest discover -s tests -v
 ```
 
-للتجربة من الفرع `neo-local-core` أضف `-b neo-local-core` إلى أمر clone.
+## v0.2/v0.3 safe tool lab
+The tool lab accepts **declarative JSON manifests**, not generated Python source. It only runs operations already implemented in an explicit allowlist. A separate folder is not a security sandbox, so arbitrary candidate code is deliberately not executed.
 
-## الأوامر
-- `init`: إنشاء قاعدة البيانات المحلية.
-- `status`: عرض الحالة وعدد المهام والذكريات.
-- `task TEXT`: تسجيل مهمة محلية.
-- `remember TITLE CONTENT`: حفظ خبرة محلية.
-- `recall QUERY`: بحث بسيط داخل الذكريات.
-- `tools`: عرض الأدوات المدمجة المتاحة.
-- `run-tool word_count TEXT`: تشغيل أداة عدّ الكلمات المحددة مسبقاً.
+Create, test, and explicitly approve a candidate:
+```bash
+python tool_lab.py create count_demo --operation word_count --sample "hello world"
+python tool_lab.py test count_demo
+python tool_lab.py approve count_demo
+python tool_lab.py list
+```
 
-## مكان البيانات
-افتراضياً تُحفظ البيانات في `~/.neo_local/memory.sqlite3`. يمكن تغيير المجلد عبر المتغير `NEO_LOCAL_HOME`.
+Supported operations: `word_count`, `uppercase`, `prefix`. The prefix operation accepts `--limit 1..500`.
 
-## حدود v0.1
-لا يوجد نموذج لغوي محلي أو اتصال API أو تطوير ذاتي تلقائي في هذا الإصدار. هذه نواة موثوقة نبني فوقها لاحقاً؛ ولا ينبغي اعتبار الفحص الساكن وحده دليلاً على أمان كود غير موثوق.
+**Run only the active approved version** (input is limited to 4000 characters):
+```bash
+python tool_lab.py run count_demo "hello from NEO-LOCAL"
+```
+
+Approved versions are stored under `~/.neo_local/tool_lab/approved/`; candidates and an audit log are stored under `~/.neo_local/tool_lab/`. Approval is explicit. Rollback switches the active-version pointer to the previous approved manifest:
+```bash
+python tool_lab.py rollback count_demo
+```
+
+The runner validates the active pointer and approved manifest before every run. This does **not** dynamically load or execute newly generated code; expanding the operation allowlist requires a reviewed code change and tests.

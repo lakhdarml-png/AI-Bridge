@@ -1,23 +1,25 @@
 # Security model
 
-## v0.1 guarantees and limits
-- The core has no network client and makes no API calls.
-- SQLite queries use parameters rather than string interpolation.
-- The tool registry is hard-coded; files in the repository are not dynamically imported or executed.
-- No arbitrary shell command is exposed by the CLI.
-- Local memory is stored under `~/.neo_local` by default; the app attempts to restrict the directory to owner-only permissions.
+## v0.1 core
+- No network client or API calls.
+- Parameterized SQLite queries.
+- No arbitrary shell command exposed by the CLI.
+- Local database is not encrypted by this program.
 
-## Important limits
-- Termux and Android permissions still govern device access.
-- A local database is not encrypted by this program. Device lock and Android storage protections matter.
-- A static source-code scan cannot prove arbitrary Python code safe.
-- Future generated tools must be tested in a separate, restricted process and must not be promoted automatically based only on successful syntax compilation.
-- Never send secrets, private files, or the API key to a remote model unless the user explicitly approves the exact data flow.
+## v0.2 tool laboratory
+- Candidate tools are JSON manifests, not executable source code.
+- Only explicitly allowlisted built-in operations can run.
+- Candidate fixtures are compared against deterministic outputs.
+- Approval requires a separate explicit command and passing tests.
+- Approved manifests are versioned; rollback changes the active pointer.
+- Audit events are appended locally.
 
-## Promotion policy for future versions
-1. Save generated code to the sandbox only.
-2. Run syntax and policy checks.
-3. Run tests using dummy data in a restricted environment.
-4. Show the diff and test results.
-5. Require explicit approval before promotion.
-6. Keep the previous version for rollback.
+## v0.3 approved runner
+- Only the active version of a manifest marked approved can run.
+- Active pointer is restricted to a version filename, not an arbitrary path.
+- Manifest name, approval status, and version number are checked before execution.
+- Each invocation accepts at most 4000 characters.
+- Runs and failed operations are recorded in the local audit log.
+- These controls reduce risk but are not an operating-system sandbox.
+
+Never send secrets, private files, or API keys to a remote model unless the user explicitly approves the exact data flow.
