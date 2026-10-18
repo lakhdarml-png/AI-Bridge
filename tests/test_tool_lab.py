@@ -15,17 +15,18 @@ class ToolLabTests(unittest.TestCase):
         self.candidates = self.state / "candidates"
         self.approved = self.state / "approved"
         self.audit = self.state / "audit.jsonl"
-        for path, value in (("STATE", self.state), ("CANDIDATES", self.candidates), ("APPROVED", self.approved), ("AUDIT", self.audit)):
-            self.enter_patch = getattr(self, "patchers", None)
-            if self.enter_patch is None:
-                self.patchers = []
-            p = patch.object(tool_lab, path, value)
+        self.patchers = [
+            patch.object(tool_lab, "STATE", self.state),
+            patch.object(tool_lab, "CANDIDATES", self.candidates),
+            patch.object(tool_lab, "APPROVED", self.approved),
+            patch.object(tool_lab, "AUDIT", self.audit),
+        ]
+        for p in self.patchers:
             p.start()
-            self.patchers.append(p)
         tool_lab.paths()
 
     def tearDown(self):
-        for p in getattr(self, "patchers", []):
+        for p in self.patchers:
             p.stop()
         self.temp.cleanup()
 
@@ -56,7 +57,6 @@ class ToolLabTests(unittest.TestCase):
     def test_rollback_selects_previous_version(self):
         tool_lab.create("prefix_demo", "prefix", "first sample", 5)
         tool_lab.approve("prefix_demo")
-        # Make and approve a second candidate version with a different fixture.
         path = tool_lab.candidate_path("prefix_demo")
         item = json.loads(path.read_text(encoding="utf-8"))
         item["sample_input"] = "second sample"
@@ -67,6 +67,30 @@ class ToolLabTests(unittest.TestCase):
         self.assertEqual(active.read_text().strip(), "v2.json")
         tool_lab.rollback("prefix_demo")
         self.assertEqual(active.read_text().strip(), "v1.json")
+
+    def test_only_approved_active_tool_can_run(self):
+        with self.assertRaises(ValueError):
+            tool_lab.run_approved("count_demo", "hello world")
+        tool_lab.create("count_demo", "word_count", "fixture", 20)
+        with self.assertRaises(ValueError):
+            tool_lab.run_approved("count_demo", "hello world")
+        tool_lab.approve("count_demo")
+        result = tool_lab.run_approved("count_demo", "hello world")
+        self.assertEqual(result, {"characters": 11, "words": 2, "lines": 1})
+
+    def test_active_pointer_cannot_escape_approved_folder(self):
+        tool_lab.create("count_demo", "word_count", "fixture", 20)
+        tool_lab.approve("count_demo")
+        active = self.approved / "count_demo" / "active.json"
+        active.write_text("../../outside.json")
+        with self.assertRaises(ValueError):
+            tool_lab.run_approved("count_demo", "x")
+
+    def test_input_limit_enforced(self):
+        tool_lab.create("upper_demo", "uppercase", "x", 20)
+        tool_lab.approve("upper_demo")
+        with self.assertRaises(ValueError):
+            tool_lab.run_approved("upper_demo", "x" * 4001)
 
 
 if __name__ == "__main__":
