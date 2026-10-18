@@ -1,8 +1,0 @@
-name = "ai-bridge-server"
-main = "server/worker.ts"
-compatibility_date = "2026-10-17"
-
-[[d1_databases]]
-binding = "DB"
-database_name = "ai-bridge-db"
-database_id = "55db6cde-0ab5-4e09-b85b-a5ab37d23fab"
