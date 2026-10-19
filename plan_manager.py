@@ -39,7 +39,36 @@ def ensure_schema() -> None:
 
 def classify_goal(goal: str) -> tuple[str, list[str]]:
     text = goal.casefold()
-    software_terms = ("app", "application", "code", "software", "bug", "برمج", "تطبيق", "كود", "خطأ", "أداة", "اداة", "مشروع")
+
+    # Match this specific, higher-risk project intent before generic research.
+    # Otherwise a phrase such as "research safe local tool development" gets
+    # a generic research template rather than a build-and-verify workflow.
+    safe_tool_terms = (
+        "تطوير أدوات محلية آمنة",
+        "تطوير ادوات محلية آمنة",
+        "تطوير أدوات محلية",
+        "تطوير ادوات محلية",
+        "أدوات محلية آمنة",
+        "ادوات محلية آمنة",
+        "أداة محلية آمنة",
+        "اداة محلية آمنة",
+        "safe local tool",
+        "secure local tool",
+        "local tool development",
+        "safe tool development",
+    )
+    if any(term in text for term in safe_tool_terms):
+        return "safe_tool_development", [
+            "حدد وظيفة الأداة وحدودها بوضوح، وما الذي يجب ألا تفعله.",
+            "افحص البنية الحالية والملفات والاختبارات قبل تعديل أي شيء.",
+            "اكتب متطلبات الأمان: مدخلات محدودة، صلاحيات أقل، وعدم تنفيذ شيفرة اعتباطية.",
+            "صمم الأداة كعملية معلنة ومحددة، مع بيانات اختبار متوقعة وحالات رفض.",
+            "اختبر النجاح والفشل والمدخلات غير الصالحة، وتأكد أن الاختبار لا يشغّل إجراءات خارجية.",
+            "اشترط موافقة صريحة قبل اعتماد نسخة جديدة، وسجل القرار في سجل التدقيق.",
+            "تحقق من التراجع إلى النسخة المعتمدة السابقة، ثم وثّق النتائج والقيود المتبقية.",
+        ]
+
+    software_terms = ("app", "application", "code", "software", "bug", "برمج", "تطبيق", "كود", "خطأ", "أداة", "اداة", "أدوات", "ادوات", "مشروع", "تطوير")
     research_terms = ("research", "learn", "study", "compare", "بحث", "تعلم", "تعلّم", "دراسة", "قارن", "افهم")
     writing_terms = ("write", "draft", "document", "report", "رسالة", "اكتب", "كتابة", "تقرير", "وثيقة")
     if any(term in text for term in software_terms):
