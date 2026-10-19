@@ -243,12 +243,31 @@ def suggest_skill(goal: str) -> dict[str, Any]:
             {"operation": "word_count", "description": "تحليل بنية النص"},
             {"operation": "prefix", "description": "استخراج جزء من النص"},
         ]
+    prepared = []
+    for item in matches:
+        operation = item["operation"]
+        sample = "مثال نصي للتجربة"
+        if operation == "word_count":
+            sample = "مرحبا بك في NEO-LOCAL"
+        elif operation == "uppercase":
+            sample = "neo-local sample"
+        elif operation == "prefix":
+            sample = "مثال نصي للتجربة"
+        prepared.append({
+            **item,
+            "candidate_name": f"skill_{operation}",
+            "create_command": (
+                f'python tool_lab.py create skill_{operation} '
+                f'--operation {operation} --sample "{sample}"'
+            ),
+            "workflow": ["create", "test", "approve"],
+        })
     return {
         "goal": goal.strip(),
-        "suggestions": matches,
+        "suggestions": prepared,
         "status": "suggested_only",
-        "next_step": "أنشئ مرشحًا تجريبيًا بأمر create، ثم اختبره ووافق عليه صراحةً إذا نجح.",
-        "limits": "اقتراحات محلية حتمية؛ لا تُنشئ أو تنفذ شيفرة ولا تتصل بالشبكة."
+        "next_step": "انسخ أمر create المناسب، راجع المرشح، ثم نفّذ test وapprove يدويًا إذا كانت النتيجة صحيحة.",
+        "limits": "أوامر مقترحة فقط؛ لا يُنفّذ أي أمر تلقائيًا، ولا تُنشأ أو تُنفّذ شيفرة ولا يوجد اتصال بالشبكة."
     }
 
 
