@@ -84,7 +84,7 @@ class DashboardTests(unittest.TestCase):
     def test_page_explains_local_and_explicit_execution(self):
         self.assertIn('lang="ar" dir="rtl"', web_dashboard.PAGE)
         self.assertIn("تنفيذ هذه الخطوة", web_dashboard.PAGE)
-        self.assertIn("لا تتصل بنموذج ذكاء اصطناعي", web_dashboard.PAGE)
+        self.assertIn("هذه ليست محادثة مع نموذج ذكاء اصطناعي", web_dashboard.PAGE)
 
     def test_page_supports_live_refresh_without_overwriting_active_edits(self):
         self.assertIn('id="live-status"', web_dashboard.PAGE)
