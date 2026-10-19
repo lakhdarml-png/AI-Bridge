@@ -1,0 +1,234 @@
+#!/usr/bin/env python3
+"""Loopback-only mobile dashboard for NEO-LOCAL; standard library only."""
+from __future__ import annotations
+
+import json
+import sqlite3
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import urlparse
+
+import core
+import plan_manager
+import plan_runner
+import tool_lab
+
+HOST = "127.0.0.1"
+PORT = 8765
+MAX_BODY = 16384
+
+PAGE = r"""<!doctype html>
+<html lang="ar" dir="rtl"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#121212"><title>NEO-LOCAL</title>
+<style>
+:root{color-scheme:dark;--bg:#121212;--panel:#1e1e1e;--gold:#e5a93c;--text:#f4f1e9;--muted:#b7b2a8;--line:#393630;--green:#7fd1a4;--red:#ff9289}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Noto Sans Arabic",sans-serif;line-height:1.55}
+header{padding:22px 18px 16px;background:linear-gradient(140deg,#292319,#151515 70%);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:12px}.mark{width:46px;height:46px;border-radius:15px;background:var(--gold);color:#17130b;display:grid;place-items:center;font-weight:900;font-size:22px}
+h1{font-size:22px;margin:0}header p{margin:3px 0 0;color:var(--muted);font-size:13px}main{max-width:850px;margin:auto;padding:16px;display:grid;gap:14px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px}h2{font-size:16px;margin:0 0 12px}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.stat{background:#282828;border-radius:12px;padding:11px}.stat strong{display:block;font-size:20px;color:var(--gold)}.stat span{font-size:12px;color:var(--muted)}
+input,textarea,select{width:100%;padding:12px;border-radius:11px;border:1px solid #4a463d;background:#151515;color:var(--text);font:inherit;margin:5px 0 10px}textarea{min-height:78px;resize:vertical}
+button{font:inherit;font-weight:650;border:1px solid var(--line);border-radius:11px;padding:10px 13px;background:#292929;color:var(--text);cursor:pointer}button:disabled{opacity:.4;cursor:not-allowed}.primary{background:var(--gold);border-color:var(--gold);color:#17130b}.danger{border-color:#713a36;color:#ff9d95}
+.actions{display:flex;flex-wrap:wrap;gap:8px}.row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.muted{color:var(--muted);font-size:13px}
+.notice{border-right:3px solid var(--gold);padding:9px 11px;background:#282319;border-radius:8px;color:#e8d9b8;font-size:12px;margin-top:10px}
+.plan-list,.steps{display:grid;gap:8px}.plan-option{width:100%;text-align:right;display:flex;justify-content:space-between;align-items:center;gap:10px}.plan-option.active{border-color:var(--gold)}.pill{font-size:11px;padding:3px 8px;border-radius:99px;background:#34302a;color:#ddd;white-space:nowrap}.step{border:1px solid var(--line);border-radius:12px;padding:12px;background:#191919}.step-top{display:flex;gap:8px;align-items:flex-start}.number{width:27px;height:27px;flex:0 0 27px;border-radius:9px;background:#353025;color:var(--gold);display:grid;place-items:center;font-weight:800}.step-title{flex:1}.result{margin-top:8px;padding:8px;background:#111;border-radius:8px;overflow-wrap:anywhere;direction:ltr;text-align:left;font:12px ui-monospace,monospace;white-space:pre-wrap}
+#message{display:none;padding:11px;border-radius:10px;background:#2b291f;border:1px solid var(--line)}#message.show{display:block}footer{text-align:center;color:var(--muted);font-size:12px;padding:4px 16px 26px}
+@media(min-width:700px){main{grid-template-columns:1fr 1fr;align-items:start}.wide{grid-column:1/-1}}
+</style></head><body>
+<header><div class="brand"><div class="mark">N</div><div><h1>NEO-LOCAL</h1><p>لوحة التحكم المحلية · تنفيذ صريح وآمن</p></div></div></header>
+<main>
+<section class="panel wide"><div class="row"><h2>حالة الوكيل</h2><span id="pulse" class="pill">جارٍ التحميل</span></div>
+<div class="stats"><div class="stat"><strong id="plan-count">—</strong><span>الخطط</span></div><div class="stat"><strong id="pending-count">—</strong><span>خطوات معلّقة</span></div><div class="stat"><strong id="done-count">—</strong><span>خطوات مكتملة</span></div></div>
+<div class="notice">لا يعمل شيء تلقائيًا. زر الطوارئ يوقف الخطوات التالية للخطة المحددة، ولا يقطع أداة بدأت تنفيذها بالفعل.</div></section>
+<section class="panel"><h2>ابدأ هدفًا جديدًا</h2><p class="muted">اكتب هدفك لتحويله إلى خطة محلية قابلة للمراجعة. هذه النسخة لا تتصل بنموذج ذكاء اصطناعي.</p>
+<form id="create-form"><label for="goal">ما الذي تريد إنجازه؟</label><textarea id="goal" maxlength="4000" required placeholder="اكتب هدفك هنا..."></textarea><button class="primary" type="submit">إنشاء خطة مسودة</button></form></section>
+<section class="panel"><div class="row"><h2>خططي</h2><button id="refresh">تحديث</button></div><div id="plans" class="plan-list"><p class="muted">جارٍ تحميل الخطط...</p></div></section>
+<section class="panel wide"><div class="row"><h2 id="selected-title">تفاصيل الخطة</h2><span id="plan-status" class="pill">—</span></div>
+<div class="actions" style="margin-bottom:12px"><button id="approve" class="primary">اعتماد الخطة</button><button id="pause" class="danger">إيقاف طارئ</button><button id="resume">استئناف</button></div>
+<div id="steps" class="steps"><p class="muted">اختر خطة لعرض خطواتها.</p></div></section>
+<div id="message" role="status" aria-live="polite" class="wide"></div></main><footer>يعمل على هذا الهاتف فقط · لا يعتمد على خدمات خارجية</footer>
+<script>
+const $=id=>document.getElementById(id);let state=null,selected=null;
+const labels={draft:"مسودة",approved:"معتمدة",pending:"معلّقة",running:"قيد التنفيذ",completed:"مكتملة",failed:"فشلت",skipped:"متخطاة"};
+async function api(path,data){const opt={method:data?"POST":"GET",headers:{"Accept":"application/json"}};if(data){opt.headers["Content-Type"]="application/json";opt.headers["X-NEO-LOCAL-UI"]="1";opt.body=JSON.stringify(data)}const r=await fetch(path,opt);const j=await r.json();if(!r.ok||!j.ok)throw Error(j.error||"تعذر تنفيذ الطلب");return j}
+function msg(s,bad=false){$("message").textContent=s;$("message").style.borderColor=bad?"#713a36":"#393630";$("message").classList.add("show")}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+async function refresh(keep=true){state=await api("/api/state");$("plan-count").textContent=state.plans.length;$("pending-count").textContent=state.plans.reduce((n,p)=>n+p.steps.filter(s=>s.status==="pending").length,0);$("done-count").textContent=state.plans.reduce((n,p)=>n+p.steps.filter(s=>s.status==="completed").length,0);$("pulse").textContent=state.plans.some(p=>p.paused)?"توجد خطة متوقفة":state.plans.some(p=>p.steps.some(s=>s.status==="running"))?"نشاط جارٍ":"مستعد";
+$("plans").innerHTML=state.plans.length?state.plans.map(p=>'<button class="plan-option '+(p.id===selected?"active":"")+'" data-plan="'+p.id+'"><span><b>#'+p.id+'</b> '+esc(p.goal)+'</span><span class="pill">'+(labels[p.status]||p.status)+'</span></button>').join(""):'<p class="muted">لا توجد خطط بعد.</p>';
+document.querySelectorAll("[data-plan]").forEach(b=>b.onclick=()=>choose(Number(b.dataset.plan)));
+if(keep&&selected&&state.plans.some(p=>p.id===selected))renderPlan();else if(state.plans.length)choose(state.plans[0].id);else{selected=null;$("steps").innerHTML='<p class="muted">أنشئ خطة للبدء.</p>'}}
+function choose(id){selected=id;renderPlan();document.querySelectorAll("[data-plan]").forEach(b=>b.classList.toggle("active",Number(b.dataset.plan)===id))}
+function renderPlan(){const p=state.plans.find(x=>x.id===selected);if(!p)return;$("selected-title").textContent="الخطة #"+p.id;$("plan-status").textContent=(p.paused?"متوقفة · ":"")+(labels[p.status]||p.status);$("approve").disabled=p.status!=="draft";$("pause").disabled=p.status!=="approved"||p.paused;$("resume").disabled=p.status!=="approved"||!p.paused;
+$("steps").innerHTML=p.steps.map(s=>'<article class="step"><div class="step-top"><div class="number">'+s.number+'</div><div class="step-title"><b>'+esc(s.description)+'</b><div class="muted">'+(labels[s.status]||s.status)+(s.tool_name?" · "+esc(s.tool_name):"")+'</div></div></div>'+(s.result_json?'<div class="result">'+esc(s.result_json)+'</div>':"")+(s.error?'<div class="muted">ملاحظة: '+esc(s.error)+'</div>':"")+
+(p.status==="approved"&&!p.paused&&["pending","failed"].includes(s.status)?'<div style="margin-top:10px"><label>الأداة المعتمدة</label><select id="tool-'+s.number+'">'+state.tools.map(t=>'<option value="'+esc(t.name)+'" '+(s.tool_name===t.name?"selected":"")+'>'+esc(t.name)+' · '+esc(t.operation)+'</option>').join("")+'</select><label>مدخلات الأداة</label><textarea id="input-'+s.number+'" maxlength="4000" placeholder="أدخل النص الذي ستعالجه الأداة">'+esc(s.input_text||"")+'</textarea><div class="actions"><button data-config="'+s.number+'">حفظ الإعداد</button><button class="primary" data-run="'+s.number+'">تنفيذ هذه الخطوة</button><button data-skip="'+s.number+'">تخطي</button>'+(s.status==="failed"?'<button data-recover="'+s.number+'">استرداد الانقطاع</button>':"")+'</div></div>':"")+'</article>').join("");
+document.querySelectorAll("[data-config]").forEach(b=>b.onclick=()=>act("/api/step/configure",{plan_id:selected,step_number:Number(b.dataset.config),tool_name:$("tool-"+b.dataset.config).value,input_text:$("input-"+b.dataset.config).value},"تم حفظ إعداد الخطوة دون تنفيذها."));
+document.querySelectorAll("[data-run]").forEach(b=>b.onclick=()=>{if(confirm("هل تريد تنفيذ هذه الخطوة الآن؟"))act("/api/step/run",{plan_id:selected,step_number:Number(b.dataset.run)},"اكتمل طلب التنفيذ.")});
+document.querySelectorAll("[data-skip]").forEach(b=>b.onclick=()=>{if(confirm("تخطي هذه الخطوة دون تنفيذها؟"))act("/api/step/skip",{plan_id:selected,step_number:Number(b.dataset.skip),reason:"تخطي صريح من لوحة التحكم"},"تم تخطي الخطوة.")});
+document.querySelectorAll("[data-recover]").forEach(b=>b.onclick=()=>{if(confirm("تسجيل الخطوة كفاشلة بسبب انقطاع سابق؟ لن يعاد تشغيلها تلقائيًا."))act("/api/step/recover",{plan_id:selected,step_number:Number(b.dataset.recover)},"تم تسجيل الاسترداد.")})}
+async function act(path,data,success){try{const r=await api(path,data);msg(r.message||success);await refresh(true)}catch(e){msg(e.message,true)}}
+$("create-form").onsubmit=async e=>{e.preventDefault();const goal=$("goal").value;await act("/api/plan/create",{goal:goal},"أُنشئت الخطة كمسودة ولم يُنفذ شيء.");$("goal").value=""};
+$("approve").onclick=()=>{if(selected&&confirm("اعتماد الخطة؟ الاعتماد لا يشغّل أي أداة."))act("/api/plan/approve",{plan_id:selected},"تم اعتماد الخطة دون تنفيذ.")};
+$("pause").onclick=()=>{if(selected&&confirm("إيقاف الخطة المحددة؟ لن تبدأ خطوات جديدة؛ التنفيذ الجاري لا يمكن قطعه."))act("/api/plan/pause",{plan_id:selected,reason:"إيقاف طارئ من لوحة التحكم"},"تم إيقاف الخطة.")};
+$("resume").onclick=()=>{if(selected)act("/api/plan/resume",{plan_id:selected},"استؤنفت الخطة؛ لا يبدأ تنفيذ تلقائي.")};
+$("refresh").onclick=()=>refresh(true).catch(e=>msg(e.message,true));refresh(false).catch(e=>msg(e.message,true));
+</script></body></html>"""
+
+
+def positive_int(value, label):
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise ValueError(f"{label} must be a positive integer")
+    return value
+
+
+def string_value(data, key, limit, allow_empty=True):
+    value = data.get(key)
+    if not isinstance(value, str) or len(value) > limit or (not allow_empty and not value.strip()):
+        raise ValueError(f"{key} must be text of at most {limit} characters")
+    return value
+
+
+def state_payload():
+    core.init_db()
+    plan_runner.ensure_schema()
+    plans = []
+    with core.connect() as db:
+        rows = db.execute("SELECT id,goal,category,status FROM plans ORDER BY id DESC LIMIT 100").fetchall()
+        for row in rows:
+            control = db.execute("SELECT paused FROM plan_controls WHERE plan_id=?", (row["id"],)).fetchone()
+            steps = db.execute("SELECT step_number,description,status,tool_name,input_text,result_json,error FROM plan_steps WHERE plan_id=? ORDER BY step_number", (row["id"],)).fetchall()
+            plans.append({
+                "id": row["id"], "goal": row["goal"], "category": row["category"],
+                "status": row["status"], "paused": bool(control["paused"]),
+                "steps": [{"number": s["step_number"], "description": s["description"],
+                           "status": s["status"], "tool_name": s["tool_name"],
+                           "input_text": s["input_text"], "result_json": s["result_json"],
+                           "error": s["error"]} for s in steps]
+            })
+    tools = []
+    for active in sorted(tool_lab.APPROVED.glob("*/active.json")):
+        try:
+            manifest, _ = tool_lab.active_manifest(active.parent.name)
+            tools.append({"name": active.parent.name, "operation": manifest["operation"]})
+        except (OSError, ValueError, json.JSONDecodeError):
+            continue
+    return {"plans": plans, "tools": tools}
+
+
+def dispatch(path, data):
+    if path == "/api/plan/create":
+        goal = string_value(data, "goal", plan_manager.MAX_GOAL_LENGTH, False)
+        plan_id = plan_manager.create_plan(goal)
+        return {"message": f"أُنشئت الخطة #{plan_id} كمسودة. لم يُنفّذ شيء."}
+    plan_id = positive_int(data.get("plan_id"), "plan_id")
+    if path == "/api/plan/approve":
+        plan_manager.approve_plan(plan_id)
+        return {"message": "تم اعتماد الخطة دون تشغيل الأدوات."}
+    if path == "/api/plan/pause":
+        plan_runner.pause(plan_id, True, string_value(data, "reason", 500))
+        return {"message": "أُوقفت الخطة؛ لا تبدأ خطوات جديدة."}
+    if path == "/api/plan/resume":
+        plan_runner.pause(plan_id, False)
+        return {"message": "استؤنفت الخطة؛ لا يبدأ تنفيذ تلقائي."}
+    step_no = positive_int(data.get("step_number"), "step_number")
+    if path == "/api/step/configure":
+        tool_name = string_value(data, "tool_name", 40, False)
+        plan_runner.configure(plan_id, step_no, tool_name, string_value(data, "input_text", 4000))
+        return {"message": "تم حفظ الإعداد دون تنفيذ."}
+    if path == "/api/step/run":
+        result = plan_runner.run_step(plan_id, step_no)
+        return {"message": "تم تنفيذ الخطوة وحفظ النتيجة.", "result": result}
+    if path == "/api/step/skip":
+        plan_runner.skip_step(plan_id, step_no, string_value(data, "reason", 500))
+        return {"message": "تم تخطي الخطوة صراحةً."}
+    if path == "/api/step/recover":
+        plan_runner.recover_interrupted(plan_id, step_no)
+        return {"message": "سُجلت الخطوة كفاشلة بسبب الانقطاع؛ لم يُعد تشغيلها."}
+    raise ValueError("unknown action")
+
+
+class Handler(BaseHTTPRequestHandler):
+    server_version = "NEO-LOCAL/0.8"
+
+    def log_message(self, fmt, *args):
+        print("dashboard:", fmt % args)
+
+    def send_payload(self, status, payload, content_type="application/json; charset=utf-8"):
+        body = payload.encode("utf-8") if isinstance(payload, str) else json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Security-Policy", "default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def local_request(self):
+        allowed_hosts = {f"127.0.0.1:{PORT}", f"localhost:{PORT}", f"[::1]:{PORT}"}
+        return self.client_address[0] in {"127.0.0.1", "::1"} and self.headers.get("Host", "").lower() in allowed_hosts
+
+    def do_GET(self):
+        if not self.local_request():
+            self.send_payload(403, {"ok": False, "error": "local access only"})
+            return
+        try:
+            path = urlparse(self.path).path
+            if path == "/":
+                self.send_payload(200, PAGE, "text/html; charset=utf-8")
+            elif path == "/api/state":
+                self.send_payload(200, {"ok": True, **state_payload()})
+            else:
+                self.send_payload(404, {"ok": False, "error": "not found"})
+        except (OSError, sqlite3.Error, ValueError, json.JSONDecodeError) as exc:
+            self.send_payload(500, {"ok": False, "error": str(exc)[:500]})
+
+    def do_POST(self):
+        if not self.local_request():
+            self.send_payload(403, {"ok": False, "error": "local access only"})
+            return
+        if self.headers.get("X-NEO-LOCAL-UI") != "1" or self.headers.get_content_type() != "application/json":
+            self.send_payload(403, {"ok": False, "error": "request origin check failed"})
+            return
+        try:
+            size = int(self.headers.get("Content-Length", "0"))
+            if size < 2 or size > MAX_BODY:
+                raise ValueError("request body size is invalid")
+            data = json.loads(self.rfile.read(size).decode("utf-8"))
+            if not isinstance(data, dict):
+                raise ValueError("request must be a JSON object")
+            result = dispatch(urlparse(self.path).path, data)
+            self.send_payload(200, {"ok": True, **result})
+        except (OSError, sqlite3.Error, ValueError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+            self.send_payload(400, {"ok": False, "error": str(exc)[:500]})
+
+    def do_OPTIONS(self):
+        self.send_payload(405, {"ok": False, "error": "method not allowed"})
+
+
+def main(argv=None):
+    global PORT
+    import argparse
+    parser = argparse.ArgumentParser(description="Start the local-only NEO-LOCAL mobile dashboard")
+    parser.add_argument("--port", type=int, default=PORT)
+    args = parser.parse_args(argv)
+    if not 1024 <= args.port <= 65535:
+        parser.error("port must be between 1024 and 65535")
+    PORT = args.port
+    core.init_db()
+    plan_runner.ensure_schema()
+    server = ThreadingHTTPServer((HOST, PORT), Handler)
+    server.daemon_threads = True
+    print(f"NEO-LOCAL dashboard: http://127.0.0.1:{PORT}")
+    print("Local to this phone only. Keep Termux open; press Ctrl+C to stop.")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nDashboard stopped.")
+    finally:
+        server.server_close()
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
