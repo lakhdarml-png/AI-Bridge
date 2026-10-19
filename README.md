@@ -22,6 +22,12 @@ python tool_lab.py run count_demo "hello from NEO-LOCAL"
 
 Supported operations: `word_count`, `uppercase`, `prefix`. Inputs are limited to 4000 characters. Only the active approved version runs; approval is explicit and rollback is available.
 
+Discover a likely built-in capability from a goal without running it:
+```bash
+python tool_lab.py suggest "أريد حساب عدد الكلمات في النص"
+``
+This produces local, deterministic suggestions only. It does not generate or execute code, contact a model, or approve a tool. Use `create`, `test`, and `approve` explicitly to turn a supported operation into an approved skill.
+
 ## Explicit task execution
 Tasks are never run automatically. Create a task, inspect the task list, and explicitly select an approved tool and input:
 
