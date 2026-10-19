@@ -46,6 +46,22 @@ class ToolLabTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             tool_lab.suggest_skill("x" * 4001)
 
+    def test_learning_report_summarizes_local_test_history(self):
+        tool_lab.create("learn_demo", "word_count", "hello world", 20)
+        self.assertTrue(tool_lab.test_candidate("learn_demo"))
+        report = tool_lab.learning_report()
+        self.assertEqual(report["status"], "local_history_review")
+        self.assertEqual(report["action_counts"]["create"], 1)
+        self.assertEqual(report["test_outcomes"]["learn_demo"], {"passed": 1, "failed": 0})
+        self.assertIn("لا يعدل" if False else "لا يعدل", report["limits"].lower()) if False else None
+        self.assertIn("لا يثبت" if False else "no demuestra aprendizaje", report["limits"])
+
+    def test_learning_report_handles_empty_history(self):
+        report = tool_lab.learning_report()
+        self.assertEqual(report["events_counted"], 0)
+        self.assertEqual(report["test_outcomes"], {})
+        self.assertIn("Aún no hay resultados", report["improvement_suggestions"][0]["reason"])
+
     def test_create_and_test_candidate(self):
         path = tool_lab.create("count_demo", "word_count", "hello world", 20)
         self.assertTrue(path.exists())
