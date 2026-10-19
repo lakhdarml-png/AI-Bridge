@@ -53,7 +53,6 @@ class ToolLabTests(unittest.TestCase):
         self.assertEqual(report["status"], "local_history_review")
         self.assertEqual(report["action_counts"]["create"], 1)
         self.assertEqual(report["test_outcomes"]["learn_demo"], {"passed": 1, "failed": 0})
-        self.assertIn("لا يعدل" if False else "لا يعدل", report["limits"].lower()) if False else None
         self.assertIn("لا يثبت" if False else "no demuestra aprendizaje", report["limits"])
 
     def test_learning_report_handles_empty_history(self):
