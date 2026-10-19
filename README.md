@@ -41,21 +41,29 @@ python task_runner.py recover --older-than-minutes 60
 Recovery never resumes or executes tasks. The threshold can be 1 to 10080 minutes.
 
 ## Task and memory management (v0.5)
-Search or inspect tasks without running them:
 ```bash
 python task_manager.py list
 python task_manager.py list --search "report"
 python task_manager.py show 1
 python task_manager.py status 1 waiting_input
-```
-Manual status changes are intentionally limited: queued tasks can move to waiting_input or failed; waiting_input can return to queued or move to failed. Running/completed tasks cannot be manually reset, and this manager never executes tools.
-
-Search/list memories:
-```bash
 python memory_manager.py
 python memory_manager.py "local tests"
 ```
-Task/memory creation and permitted task status changes are recorded in the local SQLite audit_events table.
+Manual status changes are limited to safe transitions. Task/memory creation and permitted task status changes are recorded in SQLite.
+
+## Local planner (v0.6)
+Create a draft plan without executing a task or tool:
+```bash
+python plan_manager.py create "Build an Android application"
+python plan_manager.py list
+python plan_manager.py show 1
+python plan_manager.py approve 1
+```
+Attach a plan to an existing task by passing its ID:
+```bash
+python plan_manager.py create "Improve the local tool lab" --task-id 1
+```
+The planner uses deterministic local templates, so it works without an API but is not a general-purpose language model. Approval only marks the plan approved; it never starts execution. Plan creation and approval are audited.
 
 ## Security boundary
 This is a guarded local workflow, not an OS-level sandbox. Do not pass private information to tools unless you intend to process it locally. The local SQLite database is not encrypted by this program.
