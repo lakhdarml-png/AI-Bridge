@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 
 import core
+import plan_runner
 import web_dashboard
 
 
