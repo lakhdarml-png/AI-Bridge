@@ -2,7 +2,7 @@ name: Python tests
 
 on:
   push:
-    branches: ["main", "neo-local-core", "neo-local-v0.2-tool-lab", "neo-local-v0.3-approved-runner", "neo-local-v0.4-task-runner", "neo-local-v0.5-memory-task-manager", "neo-local-v0.6-planner", "neo-local-v0.6.1-safe-tool-plans", "neo-local-v0.7-plan-execution-batch"]
+    branches: ["main", "neo-local-core", "neo-local-v0.2-tool-lab", "neo-local-v0.3-approved-runner", "neo-local-v0.4-task-runner", "neo-local-v0.5-memory-task-manager", "neo-local-v0.6-planner", "neo-local-v0.6.1-safe-tool-plans", "neo-local-v0.7-plan-execution-batch", "neo-local-v0.8.4-bridge-integration"]
   pull_request:
 
 jobs:

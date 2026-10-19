@@ -107,3 +107,5 @@ curl -X POST http://127.0.0.1:8766/run -H 'Content-Type: application/json' -d '{
 ```
 
 The initial bridge is intentionally limited to `status`, `learn`, `list`, and `tests`. It binds only to `127.0.0.1`, rejects arbitrary commands, uses subprocess without a shell, limits request size and runtime, and does not provide remote access. This is local groundwork; ChatGPT cannot reach the phone's loopback address directly. A separately designed authenticated outbound relay would be needed for remote assistant interaction, and should not expose a general shell.
+
+The mobile dashboard also includes a **Termux bridge** panel. Start `termux_bridge.py` in one Termux session and `web_dashboard.py` in another. The dashboard checks bridge status through its own loopback-only server and offers explicit-confirmation buttons for `learn`, `list`, and `tests`. The dashboard never forwards arbitrary commands, and the bridge must be running for these controls to work. This does not make the bridge remotely accessible or give ChatGPT direct access to the phone.
