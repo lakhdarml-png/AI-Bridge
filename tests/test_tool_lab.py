@@ -34,7 +34,11 @@ class ToolLabTests(unittest.TestCase):
         result = tool_lab.suggest_skill("أريد حساب عدد الكلمات في النص")
         self.assertEqual(result["status"], "suggested_only")
         self.assertIn("word_count", [item["operation"] for item in result["suggestions"]])
-        self.assertIn("لا تُنشئ أو تنفذ شيفرة", result["limits"])
+        word_skill = next(item for item in result["suggestions"] if item["operation"] == "word_count")
+        self.assertIn("python tool_lab.py create skill_word_count", word_skill["create_command"])
+        self.assertEqual(word_skill["workflow"], ["create", "test", "approve"])
+        self.assertIn("لا تُنشأ أو تُنفّذ شيفرة", result["limits"])
+        self.assertEqual(result["status"], "suggested_only")
 
     def test_skill_suggestion_rejects_empty_or_oversized_goal(self):
         with self.assertRaises(ValueError):
