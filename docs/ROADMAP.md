@@ -28,6 +28,13 @@
 - [x] Recover stale running tasks as failed without resuming them
 - [x] Tests for success, failure, duplicate execution, and recovery
 
+## v0.5 — memory and task management
+- [x] Search and inspect tasks without executing them
+- [x] Safe manual task transitions with terminal-state protection
+- [x] Search and list local memories
+- [x] SQLite audit events for task/memory creation and allowed task status changes
+- [x] Tests for search, status rules, and audit records
+
 ## Later
 - [ ] Provider-neutral adapter (optional; local core does not require an API)
 - [ ] Explicit data-egress consent and redaction before any remote provider
