@@ -24,6 +24,7 @@ class DashboardTests(unittest.TestCase):
         result = web_dashboard.dispatch(
             "/api/plan/create", {"goal": "Dashboard test plan"}
         )
+        plan_runner.ensure_schema()
         self.assertIn("مسودة", result["message"])
         with core.connect() as db:
             plan = db.execute("SELECT id,status FROM plans").fetchone()
@@ -36,6 +37,7 @@ class DashboardTests(unittest.TestCase):
 
     def test_approval_is_separate_from_execution(self):
         web_dashboard.dispatch("/api/plan/create", {"goal": "Dashboard approval"})
+        plan_runner.ensure_schema()
         web_dashboard.dispatch("/api/plan/approve", {"plan_id": 1})
         with core.connect() as db:
             self.assertEqual(
@@ -49,6 +51,7 @@ class DashboardTests(unittest.TestCase):
 
     def test_pause_and_resume_only_change_control_state(self):
         web_dashboard.dispatch("/api/plan/create", {"goal": "Dashboard pause"})
+        plan_runner.ensure_schema()
         web_dashboard.dispatch("/api/plan/approve", {"plan_id": 1})
         web_dashboard.dispatch(
             "/api/plan/pause", {"plan_id": 1, "reason": "dashboard test"}
