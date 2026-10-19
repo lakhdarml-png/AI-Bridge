@@ -40,5 +40,22 @@ python task_runner.py recover --older-than-minutes 60
 ```
 Recovery never resumes or executes tasks. The threshold can be 1 to 10080 minutes.
 
+## Task and memory management (v0.5)
+Search or inspect tasks without running them:
+```bash
+python task_manager.py list
+python task_manager.py list --search "report"
+python task_manager.py show 1
+python task_manager.py status 1 waiting_input
+```
+Manual status changes are intentionally limited: queued tasks can move to waiting_input or failed; waiting_input can return to queued or move to failed. Running/completed tasks cannot be manually reset, and this manager never executes tools.
+
+Search/list memories:
+```bash
+python memory_manager.py
+python memory_manager.py "local tests"
+```
+Task/memory creation and permitted task status changes are recorded in the local SQLite audit_events table.
+
 ## Security boundary
 This is a guarded local workflow, not an OS-level sandbox. Do not pass private information to tools unless you intend to process it locally. The local SQLite database is not encrypted by this program.
