@@ -224,6 +224,105 @@ def list_tools() -> None:
         print("  (none)")
 
 
+def suggest_skill(goal: str) -> dict[str, Any]:
+    """Suggest a safe built-in capability from a goal; never executes or writes code."""
+    if not isinstance(goal, str) or not goal.strip() or len(goal) > 4000:
+        raise ValueError("goal must be non-empty text of at most 4000 characters")
+    text_goal = goal.casefold()
+    rules = [
+        (("count", "word", "words", "عدد", "كلمات", "كلمة"), "word_count", "تحليل عدد الأحرف والكلمات والأسطر"),
+        (("uppercase", "upper", "capital", "حروف كبيرة", "تكبير الحروف"), "uppercase", "تحويل النص إلى أحرف كبيرة"),
+        (("prefix", "first characters", "بداية النص", "أول أحرف", "مقدمة"), "prefix", "استخراج بداية النص"),
+    ]
+    matches = []
+    for terms, operation, description in rules:
+        if any(term in text_goal for term in terms):
+            matches.append({"operation": operation, "description": description})
+    if not matches:
+        matches = [
+            {"operation": "word_count", "description": "تحليل بنية النص"},
+            {"operation": "prefix", "description": "استخراج جزء من النص"},
+        ]
+    prepared = []
+    for item in matches:
+        operation = item["operation"]
+        sample = "مثال نصي للتجربة"
+        if operation == "word_count":
+            sample = "مرحبا بك في NEO-LOCAL"
+        elif operation == "uppercase":
+            sample = "neo-local sample"
+        elif operation == "prefix":
+            sample = "مثال نصي للتجربة"
+        prepared.append({
+            **item,
+            "candidate_name": f"skill_{operation}",
+            "create_command": (
+                f'python tool_lab.py create skill_{operation} '
+                f'--operation {operation} --sample "{sample}"'
+            ),
+            "workflow": ["create", "test", "approve"],
+        })
+    return {
+        "goal": goal.strip(),
+        "suggestions": prepared,
+        "status": "suggested_only",
+        "next_step": "انسخ أمر create المناسب، راجع المرشح، ثم نفّذ test وapprove يدويًا إذا كانت النتيجة صحيحة.",
+        "limits": "أوامر مقترحة فقط؛ لا يُنفّذ أي أمر تلقائيًا، ولا تُنشأ أو تُنفّذ شيفرة ولا يوجد اتصال بالشبكة."
+    }
+
+
+
+def learning_report() -> dict[str, Any]:
+    """Summarize recorded tool-lab outcomes and identify conservative next steps."""
+    counts: dict[str, int] = {}
+    outcomes: dict[str, dict[str, int]] = {}
+    recent: list[dict[str, str]] = []
+    if AUDIT.is_file():
+        try:
+            lines = AUDIT.read_text(encoding="utf-8").splitlines()[-500:]
+        except OSError:
+            lines = []
+        for line in lines:
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            action = str(event.get("action", "unknown"))
+            name = str(event.get("name", "unknown"))
+            detail = str(event.get("detail", ""))
+            counts[action] = counts.get(action, 0) + 1
+            if action == "test":
+                outcome = "passed" if detail == "passed" else "failed"
+                bucket = outcomes.setdefault(name, {"passed": 0, "failed": 0})
+                bucket[outcome] += 1
+            if action in {"create", "test", "approve", "rollback", "run"}:
+                recent.append({"action": action, "name": name, "detail": detail,
+                               "time": str(event.get("time", ""))})
+    recent = recent[-10:]
+    suggestions = []
+    for name, result in sorted(outcomes.items()):
+        if result["failed"]:
+            suggestions.append({
+                "candidate": name,
+                "reason": "Se han registrado pruebas fallidas.",
+                "next_action": "Revisar sample_input y expected; crear un nuevo candidato corregido y probarlo antes de aprobarlo."
+            })
+    if not suggestions:
+        suggestions.append({
+            "candidate": None,
+            "reason": "No hay fallos registrados en el historial disponible." if outcomes else "Aún no hay resultados de pruebas registrados.",
+            "next_action": "Ejecutar pruebas representativas para cada candidato y conservar los resultados en el historial."
+        })
+    return {
+        "status": "local_history_review",
+        "events_counted": sum(counts.values()),
+        "action_counts": counts,
+        "test_outcomes": outcomes,
+        "improvement_suggestions": suggestions,
+        "recent_activity": recent,
+        "limits": "Resumen basado solo en el historial local disponible; no modifica herramientas, no ejecuta código y no demuestra aprendizaje de un modelo."
+    }
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="NEO-LOCAL safe declarative tool laboratory")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -241,7 +340,10 @@ def main(argv: list[str] | None = None) -> int:
     run = sub.add_parser("run", help="run the active approved tool on text")
     run.add_argument("name")
     run.add_argument("text")
+    suggest = sub.add_parser("suggest", help="suggest built-in skills for a goal without executing anything")
+    suggest.add_argument("goal")
     sub.add_parser("list", help="list candidates and active approved versions")
+    sub.add_parser("learn", help="review local tool history and suggest improvements")
     args = parser.parse_args(argv)
     try:
         paths()
@@ -256,6 +358,12 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "run":
             result = run_approved(args.name, args.text)
             print(json.dumps(result, ensure_ascii=False))
+        elif args.command == "suggest":
+            print(json.dumps(suggest_skill(args.goal), ensure_ascii=False, indent=2))
+            audit("suggest", "skill_discovery", args.goal[:160])
+        elif args.command == "learn":
+            print(json.dumps(learning_report(), ensure_ascii=False, indent=2))
+            audit("learn", "tool_lab", "local history summarized")
         elif args.command == "list":
             list_tools()
         return 0

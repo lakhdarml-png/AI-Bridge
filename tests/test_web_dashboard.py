@@ -92,6 +92,11 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("document.hidden", web_dashboard.PAGE)
         self.assertIn("renderPlan(!editing)", web_dashboard.PAGE)
 
+    def test_page_has_local_conversation_without_claiming_live_ai(self):
+        self.assertIn('id="conversation"', web_dashboard.PAGE)
+        self.assertIn("أنشأت مسودة الخطة", web_dashboard.PAGE)
+        self.assertIn("هذه ليست محادثة مع نموذج ذكاء اصطناعي", web_dashboard.PAGE)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -30,6 +30,37 @@ class ToolLabTests(unittest.TestCase):
             p.stop()
         self.temp.cleanup()
 
+    def test_skill_suggestions_are_local_and_non_executing(self):
+        result = tool_lab.suggest_skill("أريد حساب عدد الكلمات في النص")
+        self.assertEqual(result["status"], "suggested_only")
+        self.assertIn("word_count", [item["operation"] for item in result["suggestions"]])
+        word_skill = next(item for item in result["suggestions"] if item["operation"] == "word_count")
+        self.assertIn("python tool_lab.py create skill_word_count", word_skill["create_command"])
+        self.assertEqual(word_skill["workflow"], ["create", "test", "approve"])
+        self.assertIn("لا تُنشأ أو تُنفّذ شيفرة", result["limits"])
+        self.assertEqual(result["status"], "suggested_only")
+
+    def test_skill_suggestion_rejects_empty_or_oversized_goal(self):
+        with self.assertRaises(ValueError):
+            tool_lab.suggest_skill("   ")
+        with self.assertRaises(ValueError):
+            tool_lab.suggest_skill("x" * 4001)
+
+    def test_learning_report_summarizes_local_test_history(self):
+        tool_lab.create("learn_demo", "word_count", "hello world", 20)
+        self.assertTrue(tool_lab.test_candidate("learn_demo"))
+        report = tool_lab.learning_report()
+        self.assertEqual(report["status"], "local_history_review")
+        self.assertEqual(report["action_counts"]["create"], 1)
+        self.assertEqual(report["test_outcomes"]["learn_demo"], {"passed": 1, "failed": 0})
+        self.assertIn("no demuestra aprendizaje", report["limits"])
+
+    def test_learning_report_handles_empty_history(self):
+        report = tool_lab.learning_report()
+        self.assertEqual(report["events_counted"], 0)
+        self.assertEqual(report["test_outcomes"], {})
+        self.assertIn("Aún no hay resultados", report["improvement_suggestions"][0]["reason"])
+
     def test_create_and_test_candidate(self):
         path = tool_lab.create("count_demo", "word_count", "hello world", 20)
         self.assertTrue(path.exists())
