@@ -1,5 +1,6 @@
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 import core
@@ -80,6 +81,30 @@ class DashboardTests(unittest.TestCase):
             web_dashboard.string_value({"goal": " "}, "goal", 20, False)
         with self.assertRaises(ValueError):
             web_dashboard.dispatch("/api/step/run", {"plan_id": 1, "step_number": 0})
+
+    @patch("web_dashboard.bridge_call")
+    def test_bridge_controls_use_only_allowlisted_actions(self, bridge_call):
+        bridge_call.return_value = {"ok": True, "action": "tests", "stdout": "Ran tests"}
+        result = web_dashboard.dispatch("/api/bridge/run", {"action": "tests"})
+        self.assertEqual(result["result"]["stdout"], "Ran tests")
+        bridge_call.assert_called_once_with("tests")
+        with self.assertRaises(ValueError):
+            web_dashboard.dispatch("/api/bridge/run", {"action": "python -c 'print(1)'})
+        with self.assertRaises(ValueError):
+            web_dashboard.dispatch("/api/bridge/run", {"action": "tests", "command": "anything"})
+
+    @patch("web_dashboard.bridge_call")
+    def test_bridge_status_is_a_read_only_status_call(self, bridge_call):
+        bridge_call.return_value = {"service": "NEO-LOCAL Termux bridge", "host": "127.0.0.1"}
+        result = web_dashboard.dispatch("/api/bridge/status", {})
+        self.assertEqual(result["bridge"]["host"], "127.0.0.1")
+        bridge_call.assert_called_once_with()
+
+    def test_page_has_explicit_bridge_controls(self):
+        self.assertIn('id="bridge-status"', web_dashboard.PAGE)
+        self.assertIn('data-bridge-action="tests"', web_dashboard.PAGE)
+        self.assertIn('confirm("هل تريد "', web_dashboard.PAGE)
+        self.assertIn('id="bridge-output"', web_dashboard.PAGE)
 
     def test_page_explains_local_and_explicit_execution(self):
         self.assertIn('lang="ar" dir="rtl"', web_dashboard.PAGE)
