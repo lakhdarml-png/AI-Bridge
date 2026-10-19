@@ -88,3 +88,22 @@ The server binds only to `127.0.0.1` and uses Python's standard library. It is i
 
 ## Security boundary
 This is a guarded local workflow, not an OS-level sandbox. Do not pass private information to tools unless you intend to process it locally. The local SQLite database is not encrypted by this program.
+
+
+## Termux local maintenance bridge (v0.1)
+
+On the Android phone, from the project directory, start the loopback-only bridge:
+
+```bash
+python termux_bridge.py
+```
+
+In another Termux session, inspect its status and run one of the predefined actions:
+
+```bash
+curl http://127.0.0.1:8766/status
+curl -X POST http://127.0.0.1:8766/run -H 'Content-Type: application/json' -d '{"action":"learn"}'
+curl -X POST http://127.0.0.1:8766/run -H 'Content-Type: application/json' -d '{"action":"tests"}'
+```
+
+The initial bridge is intentionally limited to `status`, `learn`, `list`, and `tests`. It binds only to `127.0.0.1`, rejects arbitrary commands, uses subprocess without a shell, limits request size and runtime, and does not provide remote access. This is local groundwork; ChatGPT cannot reach the phone's loopback address directly. A separately designed authenticated outbound relay would be needed for remote assistant interaction, and should not expose a general shell.
