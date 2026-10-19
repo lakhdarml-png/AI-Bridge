@@ -224,6 +224,34 @@ def list_tools() -> None:
         print("  (none)")
 
 
+def suggest_skill(goal: str) -> dict[str, Any]:
+    """Suggest a safe built-in capability from a goal; never executes or writes code."""
+    if not isinstance(goal, str) or not goal.strip() or len(goal) > 4000:
+        raise ValueError("goal must be non-empty text of at most 4000 characters")
+    text_goal = goal.casefold()
+    rules = [
+        (("count", "word", "words", "عدد", "كلمات", "كلمة"), "word_count", "تحليل عدد الأحرف والكلمات والأسطر"),
+        (("uppercase", "upper", "capital", "حروف كبيرة", "تكبير الحروف"), "uppercase", "تحويل النص إلى أحرف كبيرة"),
+        (("prefix", "first characters", "بداية النص", "أول أحرف", "مقدمة"), "prefix", "استخراج بداية النص"),
+    ]
+    matches = []
+    for terms, operation, description in rules:
+        if any(term in text_goal for term in terms):
+            matches.append({"operation": operation, "description": description})
+    if not matches:
+        matches = [
+            {"operation": "word_count", "description": "تحليل بنية النص"},
+            {"operation": "prefix", "description": "استخراج جزء من النص"},
+        ]
+    return {
+        "goal": goal.strip(),
+        "suggestions": matches,
+        "status": "suggested_only",
+        "next_step": "أنشئ مرشحًا تجريبيًا بأمر create، ثم اختبره ووافق عليه صراحةً إذا نجح.",
+        "limits": "اقتراحات محلية حتمية؛ لا تُنشئ أو تنفذ شيفرة ولا تتصل بالشبكة."
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="NEO-LOCAL safe declarative tool laboratory")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -241,6 +269,8 @@ def main(argv: list[str] | None = None) -> int:
     run = sub.add_parser("run", help="run the active approved tool on text")
     run.add_argument("name")
     run.add_argument("text")
+    suggest = sub.add_parser("suggest", help="suggest built-in skills for a goal without executing anything")
+    suggest.add_argument("goal")
     sub.add_parser("list", help="list candidates and active approved versions")
     args = parser.parse_args(argv)
     try:
@@ -256,6 +286,9 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "run":
             result = run_approved(args.name, args.text)
             print(json.dumps(result, ensure_ascii=False))
+        elif args.command == "suggest":
+            print(json.dumps(suggest_skill(args.goal), ensure_ascii=False, indent=2))
+            audit("suggest", "skill_discovery", args.goal[:160])
         elif args.command == "list":
             list_tools()
         return 0
