@@ -86,6 +86,12 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("تنفيذ هذه الخطوة", web_dashboard.PAGE)
         self.assertIn("لا تتصل بنموذج ذكاء اصطناعي", web_dashboard.PAGE)
 
+    def test_page_supports_live_refresh_without_overwriting_active_edits(self):
+        self.assertIn('id="live-status"', web_dashboard.PAGE)
+        self.assertIn("setInterval(poll,5000)", web_dashboard.PAGE)
+        self.assertIn("document.hidden", web_dashboard.PAGE)
+        self.assertIn("renderPlan(!editing)", web_dashboard.PAGE)
+
 
 if __name__ == "__main__":
     unittest.main()
