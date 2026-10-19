@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import urllib.error
+import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 
@@ -15,6 +17,8 @@ import tool_lab
 HOST = "127.0.0.1"
 PORT = 8765
 MAX_BODY = 16384
+BRIDGE_URL = "http://127.0.0.1:8766"
+BRIDGE_RUN_ACTIONS = frozenset({"learn", "list", "tests"})
 
 PAGE = r"""<!doctype html>
 <html lang="ar" dir="rtl"><head>
@@ -44,6 +48,7 @@ button{font:inherit;font-weight:650;border:1px solid var(--line);border-radius:1
 <section class="panel"><div class="row"><h2>محادثة الوكيل المحلي</h2><span class="pill">محلي</span></div><p class="muted">اكتب هدفك، وسيعرض المخطط المحلي خطوات مقترحة في هذه النافذة. هذه ليست محادثة مع نموذج ذكاء اصطناعي؛ لا يوجد اتصال خارجي ولا تنفيذ تلقائي. سجل المحادثة مؤقت لهذه الصفحة.</p><div id="conversation" class="conversation" aria-live="polite"><div class="bubble agent"><small>NEO-LOCAL</small>أنا جاهز. اكتب هدفًا وسأحوّله إلى خطة مسودة محلية يمكنك مراجعتها واعتمادها.</div></div>
 <form id="create-form"><label for="goal">رسالتك</label><textarea id="goal" maxlength="4000" required placeholder="مثال: تنظيم خطوات تطوير مشروعي..."></textarea><button class="primary" type="submit">إرسال وإنشاء مسودة</button></form></section>
 <section class="panel"><div class="row"><h2>خططي</h2><div class="actions"><span id="live-status" class="pill" role="status">جارٍ الاتصال</span><button id="refresh">تحديث الآن</button></div></div><div id="plans" class="plan-list"><p class="muted">جارٍ تحميل الخطط...</p></div></section>
+<section class="panel wide"><div class="row"><h2>جسر Termux</h2><span id="bridge-status" class="pill">جارٍ التحقق</span></div><p class="muted">تحكم محلي في وظائف محددة مسبقًا فقط. لا يقبل الجسر أوامر shell عامة، ولا يبدأ أي إجراء دون ضغطك وتأكيدك.</p><div class="actions"><button id="bridge-refresh">فحص الاتصال</button><button data-bridge-action="learn">تحليل سجل التعلم المحلي</button><button data-bridge-action="list">عرض الأدوات</button><button data-bridge-action="tests">تشغيل الاختبارات</button></div><pre id="bridge-output" class="result" aria-live="polite">لم يُنفّذ أي إجراء بعد.</pre></section>
 <section class="panel wide"><div class="row"><h2 id="selected-title">تفاصيل الخطة</h2><span id="plan-status" class="pill">—</span></div>
 <div class="actions" style="margin-bottom:12px"><button id="approve" class="primary">اعتماد الخطة</button><button id="pause" class="danger">إيقاف طارئ</button><button id="resume">استئناف</button></div>
 <div id="progress-meta" class="progress-meta"><span>تقدّم الخطة</span><span id="progress-label">—</span></div><div class="progress-track" role="progressbar" aria-label="تقدم الخطة" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="progress-fill" class="progress-fill"></div></div><div id="steps" class="steps"><p class="muted">اختر خطة لعرض خطواتها.</p></div></section>
@@ -52,6 +57,8 @@ button{font:inherit;font-weight:650;border:1px solid var(--line);border-radius:1
 const $=id=>document.getElementById(id);let state=null,selected=null;
 const labels={draft:"مسودة",approved:"معتمدة",pending:"معلّقة",running:"قيد التنفيذ",completed:"مكتملة",failed:"فشلت",skipped:"متخطاة"};
 async function api(path,data){const opt={method:data?"POST":"GET",headers:{"Accept":"application/json"}};if(data){opt.headers["Content-Type"]="application/json";opt.headers["X-NEO-LOCAL-UI"]="1";opt.body=JSON.stringify(data)}const r=await fetch(path,opt);const j=await r.json();if(!r.ok||!j.ok)throw Error(j.error||"تعذر تنفيذ الطلب");return j}
+async function refreshBridge(){try{const j=await api("/api/bridge/status");const b=j.bridge;if(!b||b.service!=="NEO-LOCAL Termux bridge"||b.host!=="127.0.0.1"||b.remote_access!==false||b.arbitrary_commands!==false)throw Error("استجابة الجسر غير مطابقة");$("bridge-status").textContent="متصل · v"+b.version;$("bridge-status").classList.remove("pulse-warn");if(!$("bridge-output").dataset.busy)$("bridge-output").textContent="الجسر متصل. الإجراءات المتاحة: "+b.actions.join("، ")}catch(e){$("bridge-status").textContent="غير متصل";$("bridge-status").classList.add("pulse-warn");if(!$("bridge-output").dataset.busy)$("bridge-output").textContent=e.message+"\nشغّل termux_bridge.py في Termux ثم أعد الفحص."}}
+async function runBridgeAction(action){const names={learn:"تحليل سجل التعلم المحلي",list:"عرض الأدوات",tests:"تشغيل الاختبارات"};if(!Object.prototype.hasOwnProperty.call(names,action))return;if(!confirm("هل تريد "+names[action]+" الآن؟"))return;const buttons=[...document.querySelectorAll("[data-bridge-action]")];buttons.forEach(b=>b.disabled=true);$("bridge-output").dataset.busy="1";$("bridge-output").textContent="جارٍ تنفيذ الإجراء المحدد: "+names[action]+"…";try{const j=await api("/api/bridge/run",{action});const r=j.result;if(!r||!r.ok){$("bridge-output").textContent=(r&&r.error?r.error:"فشل الإجراء")+(r&&r.stdout?"\n\n"+r.stdout:"")+(r&&r.stderr?"\n"+r.stderr:"");return}$("bridge-output").textContent=(r.stdout||"اكتمل الإجراء دون مخرجات.")+(r.stderr?"\n"+r.stderr:"");}catch(e){$("bridge-output").textContent=e.message}finally{delete $("bridge-output").dataset.busy;buttons.forEach(b=>b.disabled=false);refreshBridge()}}
 function msg(s,bad=false){$("message").textContent=s;$("message").style.borderColor=bad?"#713a36":"#393630";$("message").classList.add("show")}
 function chat(role,text){const el=document.createElement("div");el.className="bubble "+role;const who=document.createElement("small");who.textContent=role==="user"?"أنت":"NEO-LOCAL · المخطط المحلي";el.appendChild(who);el.appendChild(document.createTextNode(text));$("conversation").appendChild(el);$("conversation").scrollTop=$("conversation").scrollHeight}
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
@@ -73,7 +80,7 @@ $("approve").onclick=()=>{if(selected&&confirm("اعتماد الخطة؟ الا
 $("pause").onclick=()=>{if(selected&&confirm("إيقاف الخطة المحددة؟ لن تبدأ خطوات جديدة؛ التنفيذ الجاري لا يمكن قطعه."))act("/api/plan/pause",{plan_id:selected,reason:"إيقاف طارئ من لوحة التحكم"},"تم إيقاف الخطة.")};
 $("resume").onclick=()=>{if(selected)act("/api/plan/resume",{plan_id:selected},"استؤنفت الخطة؛ لا يبدأ تنفيذ تلقائي.")};
 let polling=false;async function poll(){if(polling||document.hidden)return;polling=true;try{await refresh(true)}catch(e){$("live-status").textContent="غير متصل";$("live-status").classList.add("pulse-warn")}finally{polling=false}}
-$("refresh").onclick=()=>poll();refresh(false).catch(e=>{$("live-status").textContent="غير متصل";$("live-status").classList.add("pulse-warn");msg(e.message,true)});setInterval(poll,5000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)poll()});
+$("refresh").onclick=()=>poll();$("bridge-refresh").onclick=refreshBridge;document.querySelectorAll("[data-bridge-action]").forEach(b=>b.onclick=()=>runBridgeAction(b.dataset.bridgeAction));refreshBridge();setInterval(refreshBridge,15000);refresh(false).catch(e=>{$("live-status").textContent="غير متصل";$("live-status").classList.add("pulse-warn");msg(e.message,true)});setInterval(poll,5000);document.addEventListener("visibilitychange",()=>{if(!document.hidden){poll();refreshBridge()}});
 </script></body></html>"""
 
 
@@ -117,7 +124,43 @@ def state_payload():
     return {"plans": plans, "tools": tools}
 
 
+def bridge_call(action=None):
+    """Call only the loopback bridge status endpoint or a fixed maintenance action."""
+    if action is not None and action not in BRIDGE_RUN_ACTIONS:
+        raise ValueError("bridge action not allowed")
+    if action is None:
+        request = urllib.request.Request(BRIDGE_URL + "/status", headers={"Accept": "application/json"})
+        timeout = 3
+    else:
+        body = json.dumps({"action": action}).encode("utf-8")
+        request = urllib.request.Request(
+            BRIDGE_URL + "/run", data=body,
+            headers={"Accept": "application/json", "Content-Type": "application/json"},
+            method="POST",
+        )
+        timeout = 125 if action == "tests" else 15
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return json.loads(response.read(16384).decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        try:
+            return json.loads(exc.read(16384).decode("utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            return {"ok": False, "error": "bridge returned HTTP " + str(exc.code)}
+    except (urllib.error.URLError, TimeoutError, OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        return {"ok": False, "error": "تعذر الاتصال بجسر Termux المحلي: " + str(exc)[:180]}
+
+
 def dispatch(path, data):
+    if path == "/api/bridge/status":
+        return {"bridge": bridge_call()}
+    if path == "/api/bridge/run":
+        if set(data) != {"action"} or not isinstance(data.get("action"), str):
+            raise ValueError("bridge request must contain only an action")
+        action = data["action"]
+        if action not in BRIDGE_RUN_ACTIONS:
+            raise ValueError("bridge action not allowed")
+        return {"result": bridge_call(action)}
     if path == "/api/plan/create":
         goal = string_value(data, "goal", plan_manager.MAX_GOAL_LENGTH, False)
         plan_id = plan_manager.create_plan(goal)
