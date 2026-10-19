@@ -89,7 +89,7 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(result["result"]["stdout"], "Ran tests")
         bridge_call.assert_called_once_with("tests")
         with self.assertRaises(ValueError):
-            web_dashboard.dispatch("/api/bridge/run", {"action": "python -c 'print(1)'})
+            web_dashboard.dispatch("/api/bridge/run", {"action": "python -c 'print(1)'"})
         with self.assertRaises(ValueError):
             web_dashboard.dispatch("/api/bridge/run", {"action": "tests", "command": "anything"})
 
