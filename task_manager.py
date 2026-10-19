@@ -19,10 +19,10 @@ def search_tasks(query: str = "", limit: int = 50):
         raise ValueError("limit must be between 1 and 200")
     with core.connect() as db:
         if query.strip():
-            pattern = "%" + query.strip().replace("%", "\\%").replace("_", "\\_") + "%"
+            pattern = "%" + query.strip() + "%"
             return db.execute(
                 "SELECT id,goal,status,result,created_at,updated_at FROM tasks "
-                "WHERE goal LIKE ? ESCAPE '\\\\' ORDER BY id DESC LIMIT ?", (pattern, limit)
+                "WHERE goal LIKE ? ORDER BY id DESC LIMIT ?", (pattern, limit)
             ).fetchall()
         return db.execute(
             "SELECT id,goal,status,result,created_at,updated_at FROM tasks ORDER BY id DESC LIMIT ?",
