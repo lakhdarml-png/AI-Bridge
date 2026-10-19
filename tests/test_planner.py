@@ -35,6 +35,20 @@ class PlannerTests(unittest.TestCase):
         self.assertEqual(plan["category"], "software_project")
         self.assertIn("اختبر", " ".join(json.loads(plan["steps_json"])))
 
+    def test_safe_local_tool_goal_gets_specific_security_plan(self):
+        plan_id = plan_manager.create_plan("بحث عن طرق آمنة لتطوير أدوات محلية")
+        plan = plan_manager.get_plan(plan_id)
+        steps = " ".join(json.loads(plan["steps_json"]))
+        self.assertEqual(plan["category"], "safe_tool_development")
+        self.assertIn("صلاحيات أقل", steps)
+        self.assertIn("موافقة صريحة", steps)
+        self.assertIn("التراجع", steps)
+        self.assertEqual(plan["status"], "draft")
+
+    def test_unrelated_research_goal_stays_research(self):
+        plan_id = plan_manager.create_plan("بحث عن تاريخ العمارة")
+        self.assertEqual(plan_manager.get_plan(plan_id)["category"], "research")
+
     def test_research_goal_is_classified(self):
         plan_id = plan_manager.create_plan("بحث عن طرق آمنة")
         self.assertEqual(plan_manager.get_plan(plan_id)["category"], "research")
