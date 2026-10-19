@@ -71,7 +71,8 @@ $("create-form").onsubmit=async e=>{e.preventDefault();const goal=$("goal").valu
 $("approve").onclick=()=>{if(selected&&confirm("اعتماد الخطة؟ الاعتماد لا يشغّل أي أداة."))act("/api/plan/approve",{plan_id:selected},"تم اعتماد الخطة دون تنفيذ.")};
 $("pause").onclick=()=>{if(selected&&confirm("إيقاف الخطة المحددة؟ لن تبدأ خطوات جديدة؛ التنفيذ الجاري لا يمكن قطعه."))act("/api/plan/pause",{plan_id:selected,reason:"إيقاف طارئ من لوحة التحكم"},"تم إيقاف الخطة.")};
 $("resume").onclick=()=>{if(selected)act("/api/plan/resume",{plan_id:selected},"استؤنفت الخطة؛ لا يبدأ تنفيذ تلقائي.")};
-let polling=false;async function poll(){if(polling||document.hidden)return;polling=true;try{await refresh(true)}catch(e){$("live-status").textContent="غير متصل";$("live-status").classList.add("pulse-warn")}finally{polling=false}}\n$("refresh").onclick=()=>poll();refresh(false).catch(e=>{$("live-status").textContent="غير متصل";$("live-status").classList.add("pulse-warn");msg(e.message,true)});setInterval(poll,5000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)poll()});
+let polling=false;async function poll(){if(polling||document.hidden)return;polling=true;try{await refresh(true)}catch(e){$("live-status").textContent="غير متصل";$("live-status").classList.add("pulse-warn")}finally{polling=false}}
+$("refresh").onclick=()=>poll();refresh(false).catch(e=>{$("live-status").textContent="غير متصل";$("live-status").classList.add("pulse-warn");msg(e.message,true)});setInterval(poll,5000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)poll()});
 </script></body></html>"""
 
 
