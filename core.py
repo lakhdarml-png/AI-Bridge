@@ -50,6 +50,15 @@ def init_db() -> None:
             tags TEXT NOT NULL DEFAULT '',
             created_at TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS audit_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_type TEXT NOT NULL,
+            entity_type TEXT NOT NULL,
+            entity_id TEXT NOT NULL,
+            details TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_events(entity_type, entity_id, id);
         CREATE INDEX IF NOT EXISTS idx_tasks_created ON tasks(created_at);
         CREATE INDEX IF NOT EXISTS idx_memories_created ON memories(created_at);
         """)
@@ -67,7 +76,12 @@ def add_task(goal: str) -> int:
             "INSERT INTO tasks(goal, status, created_at, updated_at) VALUES(?, 'queued', ?, ?)",
             (goal, stamp, stamp),
         )
-        return int(cur.lastrowid)
+        task_id = int(cur.lastrowid)
+        db.execute(
+            "INSERT INTO audit_events(event_type, entity_type, entity_id, details, created_at) VALUES(?,?,?,?,?)",
+            ("task_created", "task", str(task_id), goal[:500], stamp),
+        )
+        return task_id
 
 
 def remember(title: str, content: str, tags: str = "") -> int:
@@ -75,11 +89,17 @@ def remember(title: str, content: str, tags: str = "") -> int:
     if not title or not content:
         raise ValueError("العنوان والمحتوى مطلوبان.")
     with connect() as db:
+        stamp = now()
         cur = db.execute(
             "INSERT INTO memories(title, content, tags, created_at) VALUES(?,?,?,?)",
-            (title[:200], content[:12000], tags[:500], now()),
+            (title[:200], content[:12000], tags[:500], stamp),
         )
-        return int(cur.lastrowid)
+        memory_id = int(cur.lastrowid)
+        db.execute(
+            "INSERT INTO audit_events(event_type, entity_type, entity_id, details, created_at) VALUES(?,?,?,?,?)",
+            ("memory_created", "memory", str(memory_id), title[:200], stamp),
+        )
+        return memory_id
 
 
 def recall(query: str, limit: int = 10) -> list[sqlite3.Row]:
