@@ -157,6 +157,34 @@ def run_step(plan_id, step_no):
         raise
 
 
+def skip_step(plan_id, step_no, reason="user explicitly skipped step"):
+    """Explicitly skip a step that has not started or has failed."""
+    ensure_schema()
+    with core.connect() as db:
+        db.execute("BEGIN IMMEDIATE")
+        plan = db.execute("SELECT status FROM plans WHERE id=?", (plan_id,)).fetchone()
+        if not plan:
+            raise ValueError("plan does not exist")
+        if plan["status"] != "approved":
+            raise ValueError("plan must be approved first")
+        control = db.execute("SELECT paused FROM plan_controls WHERE plan_id=?", (plan_id,)).fetchone()
+        if control["paused"]:
+            raise ValueError("plan is paused")
+        step = db.execute(
+            "SELECT status FROM plan_steps WHERE plan_id=? AND step_number=?", (plan_id, step_no)
+        ).fetchone()
+        if not step:
+            raise ValueError("step does not exist")
+        if step["status"] not in ("pending", "failed"):
+            raise ValueError(f"step cannot be skipped from {step['status']} state")
+        message = (reason or "user explicitly skipped step")[:500]
+        db.execute(
+            "UPDATE plan_steps SET status='skipped',error=?,updated_at=? WHERE plan_id=? AND step_number=? AND status IN ('pending','failed')",
+            (message, now(), plan_id, step_no),
+        )
+        audit(db, "plan_step_skipped", plan_id, step_no, message)
+
+
 def recover_interrupted(plan_id, step_no):
     """Mark a stranded running step failed; never re-execute it automatically."""
     ensure_schema()
@@ -196,6 +224,7 @@ def main(argv=None):
     p = sub.add_parser("list"); p.add_argument("plan_id", type=int)
     p = sub.add_parser("configure"); p.add_argument("plan_id", type=int); p.add_argument("step_number", type=int); p.add_argument("tool_name"); p.add_argument("input_text")
     p = sub.add_parser("run"); p.add_argument("plan_id", type=int); p.add_argument("step_number", type=int)
+    p = sub.add_parser("skip"); p.add_argument("plan_id", type=int); p.add_argument("step_number", type=int); p.add_argument("--reason", default="user explicitly skipped step")
     p = sub.add_parser("recover"); p.add_argument("plan_id", type=int); p.add_argument("step_number", type=int)
     p = sub.add_parser("pause"); p.add_argument("plan_id", type=int); p.add_argument("--reason", default="user requested pause")
     p = sub.add_parser("resume"); p.add_argument("plan_id", type=int)
@@ -221,6 +250,9 @@ def main(argv=None):
             print("Configured; nothing executed.")
         elif args.cmd == "run":
             print(json.dumps(run_step(args.plan_id, args.step_number), ensure_ascii=False))
+        elif args.cmd == "skip":
+            skip_step(args.plan_id, args.step_number, args.reason)
+            print("Step skipped explicitly; nothing executed.")
         elif args.cmd == "recover":
             recover_interrupted(args.plan_id, args.step_number)
             print("Interrupted step marked failed; inspect before explicitly retrying.")
