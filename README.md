@@ -25,6 +25,10 @@ Supported operations: `word_count`, `uppercase`, `prefix`. Inputs are limited to
 Discover a likely built-in capability from a goal without running it:
 ```bash
 python tool_lab.py suggest "أريد حساب عدد الكلمات في النص"
+python tool_lab.py learn
+
+The `learn` command reviews recent local tool-lab audit events, summarizes candidate test outcomes, and suggests review steps when failures are recorded. It only analyzes existing history; it does not change tools, execute generated code, or provide model-based learning. The report covers up to the latest 500 audit lines and shows recent activity.
+
 ``
 The result includes a suggested candidate name, a ready-to-copy `create` command, and the manual `create → test → approve` workflow for each match. These are suggestions only: NEO-LOCAL does not execute the displayed command, generate or execute code, contact a model, or approve a tool. Inspect the proposed sample and command before running them.
 
