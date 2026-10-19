@@ -66,7 +66,7 @@ document.querySelectorAll("[data-config]").forEach(b=>b.onclick=()=>act("/api/st
 document.querySelectorAll("[data-run]").forEach(b=>b.onclick=()=>{if(confirm("هل تريد تنفيذ هذه الخطوة الآن؟"))act("/api/step/run",{plan_id:selected,step_number:Number(b.dataset.run)},"اكتمل طلب التنفيذ.")});
 document.querySelectorAll("[data-skip]").forEach(b=>b.onclick=()=>{if(confirm("تخطي هذه الخطوة دون تنفيذها؟"))act("/api/step/skip",{plan_id:selected,step_number:Number(b.dataset.skip),reason:"تخطي صريح من لوحة التحكم"},"تم تخطي الخطوة.")});
 document.querySelectorAll("[data-recover]").forEach(b=>b.onclick=()=>{if(confirm("تسجيل الخطوة كفاشلة بسبب انقطاع سابق؟ لن يعاد تشغيلها تلقائيًا."))act("/api/step/recover",{plan_id:selected,step_number:Number(b.dataset.recover)},"تم تسجيل الاسترداد.")})}
-async function act(path,data,success){try{const r=await api(path,data);msg(r.message||success);await refresh(true)}catch(e){msg(e.message,true)}}
+async function act(path,data,success){try{const r=await api(path,data);if(r.plan_id)selected=r.plan_id;msg(r.message||success);await refresh(true)}catch(e){msg(e.message,true)}}
 $("create-form").onsubmit=async e=>{e.preventDefault();const goal=$("goal").value;await act("/api/plan/create",{goal:goal},"أُنشئت الخطة كمسودة ولم يُنفذ شيء.");$("goal").value=""};
 $("approve").onclick=()=>{if(selected&&confirm("اعتماد الخطة؟ الاعتماد لا يشغّل أي أداة."))act("/api/plan/approve",{plan_id:selected},"تم اعتماد الخطة دون تنفيذ.")};
 $("pause").onclick=()=>{if(selected&&confirm("إيقاف الخطة المحددة؟ لن تبدأ خطوات جديدة؛ التنفيذ الجاري لا يمكن قطعه."))act("/api/plan/pause",{plan_id:selected,reason:"إيقاف طارئ من لوحة التحكم"},"تم إيقاف الخطة.")};
@@ -119,7 +119,7 @@ def dispatch(path, data):
     if path == "/api/plan/create":
         goal = string_value(data, "goal", plan_manager.MAX_GOAL_LENGTH, False)
         plan_id = plan_manager.create_plan(goal)
-        return {"message": f"أُنشئت الخطة #{plan_id} كمسودة. لم يُنفّذ شيء."}
+        return {"message": f"أُنشئت الخطة #{plan_id} كمسودة. لم يُنفّذ شيء.", "plan_id": plan_id}
     plan_id = positive_int(data.get("plan_id"), "plan_id")
     if path == "/api/plan/approve":
         plan_manager.approve_plan(plan_id)
