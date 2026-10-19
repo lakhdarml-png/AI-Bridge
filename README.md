@@ -65,5 +65,16 @@ python plan_manager.py create "Improve the local tool lab" --task-id 1
 ```
 The planner uses deterministic local templates, so it works without an API but is not a general-purpose language model. Approval only marks the plan approved; it never starts execution. Plan creation and approval are audited.
 
+## Mobile dashboard (v0.8)
+Start the local-only, phone-friendly dashboard from Termux:
+```bash
+python web_dashboard.py
+```
+Then open `http://127.0.0.1:8765` in the browser on the same phone. Keep Termux running while using it; stop the server with Ctrl+C. If the port is occupied, use `python web_dashboard.py --port 8766` and open that port instead.
+
+The dashboard can create draft plans, explicitly approve a plan, configure a step with an active approved tool, run one step only after confirmation, skip a step, record a stranded running step as failed, and pause/resume a plan. It never auto-approves plans or runs subsequent steps. The emergency-stop control prevents later steps from starting; it cannot interrupt a tool that is already running.
+
+The server binds only to `127.0.0.1` and uses Python's standard library. It is intended for the same device, not LAN access. The goal box creates a deterministic local plan; it is not a live AI chat and does not call a model or network service.
+
 ## Security boundary
 This is a guarded local workflow, not an OS-level sandbox. Do not pass private information to tools unless you intend to process it locally. The local SQLite database is not encrypted by this program.
