@@ -30,6 +30,18 @@ class ToolLabTests(unittest.TestCase):
             p.stop()
         self.temp.cleanup()
 
+    def test_skill_suggestions_are_local_and_non_executing(self):
+        result = tool_lab.suggest_skill("أريد حساب عدد الكلمات في النص")
+        self.assertEqual(result["status"], "suggested_only")
+        self.assertIn("word_count", [item["operation"] for item in result["suggestions"]])
+        self.assertIn("لا تُنشئ أو تنفذ شيفرة", result["limits"])
+
+    def test_skill_suggestion_rejects_empty_or_oversized_goal(self):
+        with self.assertRaises(ValueError):
+            tool_lab.suggest_skill("   ")
+        with self.assertRaises(ValueError):
+            tool_lab.suggest_skill("x" * 4001)
+
     def test_create_and_test_candidate(self):
         path = tool_lab.create("count_demo", "word_count", "hello world", 20)
         self.assertTrue(path.exists())
