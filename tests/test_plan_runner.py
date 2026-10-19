@@ -101,6 +101,29 @@ class PlanRunnerTests(unittest.TestCase):
         self.assertIn("plan_step_started", events)
         self.assertIn("plan_step_failed", events)
 
+    def test_skip_is_explicit_audited_and_never_executes(self):
+        plan_runner.skip_step(self.plan_id, 1, "not needed")
+        row = self.step()
+        self.assertEqual(row["status"], "skipped")
+        self.assertEqual(row["error"], "not needed")
+        with core.connect() as db:
+            events = [r["event_type"] for r in db.execute(
+                "SELECT event_type FROM audit_events WHERE entity_type='plan_step' AND entity_id='1:1'"
+            )]
+        self.assertIn("plan_step_skipped", events)
+        with self.assertRaisesRegex(ValueError, "skipped"):
+            plan_runner.run_step(self.plan_id, 1)
+
+    def test_skip_rejects_paused_plan_and_completed_step(self):
+        plan_runner.pause(self.plan_id, True, "test")
+        with self.assertRaisesRegex(ValueError, "paused"):
+            plan_runner.skip_step(self.plan_id, 1)
+        plan_runner.pause(self.plan_id, False)
+        self.configure()
+        plan_runner.run_step(self.plan_id, 1)
+        with self.assertRaisesRegex(ValueError, "completed"):
+            plan_runner.skip_step(self.plan_id, 1)
+
     def test_interrupted_step_requires_explicit_recovery(self):
         self.configure()
         with core.connect() as db:
