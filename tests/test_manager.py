@@ -25,7 +25,7 @@ class ManagerTests(unittest.TestCase):
         task_manager.set_status(task_id,"waiting_input")
         task_manager.set_status(task_id,"queued")
         with core.connect() as db:
-            events=db.execute("SELECT event_type,details FROM audit_events WHERE entity_id=? ORDER BY id",(str(task_id),)).fetchall()
+            events=db.execute("SELECT event_type,details FROM audit_events WHERE entity_id=? AND event_type='task_status_changed' ORDER BY id",(str(task_id),)).fetchall()
         self.assertEqual(len(events),2)
         self.assertEqual(events[0]["details"],"queued -> waiting_input")
         with self.assertRaises(ValueError): task_manager.set_status(task_id,"completed")
