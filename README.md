@@ -26,7 +26,7 @@ Discover a likely built-in capability from a goal without running it:
 ```bash
 python tool_lab.py suggest "أريد حساب عدد الكلمات في النص"
 ``
-This produces local, deterministic suggestions only. It does not generate or execute code, contact a model, or approve a tool. Use `create`, `test`, and `approve` explicitly to turn a supported operation into an approved skill.
+The result includes a suggested candidate name, a ready-to-copy `create` command, and the manual `create → test → approve` workflow for each match. These are suggestions only: NEO-LOCAL does not execute the displayed command, generate or execute code, contact a model, or approve a tool. Inspect the proposed sample and command before running them.
 
 ## Explicit task execution
 Tasks are never run automatically. Create a task, inspect the task list, and explicitly select an approved tool and input:
