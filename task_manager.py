@@ -8,8 +8,11 @@ from datetime import datetime, timezone
 import core
 
 TRANSITIONS = {
-    "queued": {"waiting_input", "failed"},
+    "queued": {"running", "waiting_input", "failed"},
+    "running": {"completed", "failed"},
     "waiting_input": {"queued", "failed"},
+    "completed": set(),
+    "failed": set(),
 }
 def now():
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -38,22 +41,54 @@ def show_task(task_id: int):
         raise ValueError("task does not exist")
     return row
 
-def set_status(task_id: int, new_status: str):
-    if new_status not in {"queued", "waiting_input", "failed"}:
-        raise ValueError("manual status may only be queued, waiting_input, or failed")
+def transition_status(
+    task_id: int,
+    new_status: str,
+    *,
+    expected_status: str | None = None,
+    actor: str = "system",
+    details: str = "",
+    result: str | None = None,
+    execution_transition: bool = False,
+):
+    """Apply one validated state change and its audit event atomically."""
+    if task_id < 1:
+        raise ValueError("task ID must be positive")
+    if new_status not in TRANSITIONS:
+        raise ValueError(f"unknown task status: {new_status}")
+    if new_status in {"running", "completed"} and not execution_transition:
+        raise ValueError("execution states may only be changed by the task runner")
     stamp = now()
     with core.connect() as db:
+        db.execute("BEGIN IMMEDIATE")
         row = db.execute("SELECT status FROM tasks WHERE id=?", (task_id,)).fetchone()
         if row is None:
             raise ValueError("task does not exist")
         old_status = row["status"]
+        if expected_status is not None and old_status != expected_status:
+            raise ValueError(f"task state changed: expected {expected_status}, found {old_status}")
         if new_status not in TRANSITIONS.get(old_status, set()):
             raise ValueError(f"transition not allowed: {old_status} -> {new_status}")
-        db.execute("UPDATE tasks SET status=?, updated_at=? WHERE id=? AND status=?",
-                   (new_status, stamp, task_id, old_status))
-        db.execute("INSERT INTO audit_events(event_type, entity_type, entity_id, details, created_at) VALUES(?,?,?,?,?)",
-                   ("task_status_changed", "task", str(task_id), f"{old_status} -> {new_status}", stamp))
+        cur = db.execute(
+            "UPDATE tasks SET status=?, result=?, updated_at=? WHERE id=? AND status=?",
+            (new_status, result, stamp, task_id, old_status),
+        )
+        if cur.rowcount != 1:
+            raise ValueError("task state changed; refusing transition")
+        audit_details = f"{old_status} -> {new_status}; actor={actor}"
+        if details:
+            audit_details += f"; {details}"
+        db.execute(
+            "INSERT INTO audit_events(event_type, entity_type, entity_id, details, created_at) VALUES(?,?,?,?,?)",
+            ("task_status_changed", "task", str(task_id), audit_details[:2000], stamp),
+        )
     return old_status
+
+
+def set_status(task_id: int, new_status: str):
+    if new_status not in {"queued", "waiting_input", "failed"}:
+        raise ValueError("manual status may only be queued, waiting_input, or failed")
+    return transition_status(task_id, new_status, actor="manual")
 
 def main(argv=None):
     parser=argparse.ArgumentParser(description="Search and manage tasks without executing them")

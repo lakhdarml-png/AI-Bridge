@@ -27,7 +27,7 @@ class ManagerTests(unittest.TestCase):
         with core.connect() as db:
             events=db.execute("SELECT event_type,details FROM audit_events WHERE entity_id=? AND event_type='task_status_changed' ORDER BY id",(str(task_id),)).fetchall()
         self.assertEqual(len(events),2)
-        self.assertEqual(events[0]["details"],"queued -> waiting_input")
+        self.assertEqual(events[0]["details"],"queued -> waiting_input; actor=manual")
         with self.assertRaises(ValueError): task_manager.set_status(task_id,"completed")
         with self.assertRaises(ValueError): task_manager.set_status(task_id,"running")
 
@@ -35,6 +35,30 @@ class ManagerTests(unittest.TestCase):
         task_id=core.add_task("Finished")
         with core.connect() as db: db.execute("UPDATE tasks SET status='completed' WHERE id=?",(task_id,))
         with self.assertRaises(ValueError): task_manager.set_status(task_id,"queued")
+
+
+    def test_execution_transition_requires_runner_and_checks_expected_state(self):
+        task_id=core.add_task("Controlled execution")
+        with self.assertRaises(ValueError):
+            task_manager.transition_status(task_id,"running")
+        task_manager.transition_status(
+            task_id,"running",expected_status="queued",actor="test",
+            execution_transition=True,
+        )
+        with self.assertRaises(ValueError):
+            task_manager.transition_status(
+                task_id,"completed",expected_status="queued",actor="test",
+                execution_transition=True,
+            )
+        with core.connect() as db:
+            row=db.execute("SELECT status FROM tasks WHERE id=?",(task_id,)).fetchone()
+            events=db.execute(
+                "SELECT details FROM audit_events WHERE entity_id=? AND event_type='task_status_changed' ORDER BY id",
+                (str(task_id),),
+            ).fetchall()
+        self.assertEqual(row["status"],"running")
+        self.assertEqual(len(events),1)
+        self.assertIn("actor=test",events[0]["details"])
 
     def test_memory_search_and_listing(self):
         core.remember("Termux setup","Keep commands short and test locally","workflow")

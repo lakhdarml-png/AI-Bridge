@@ -50,6 +50,20 @@ class TaskRunnerTests(unittest.TestCase):
         self.assertEqual(row["status"], "completed")
         self.assertEqual(json.loads(row["result"]), result)
 
+
+    def test_execution_transitions_are_audited_atomically(self):
+        self.make_approved_tool()
+        task_id = core.add_task("Audit transitions")
+        task_runner.execute_task(task_id, "count_demo", "audit me")
+        with core.connect() as db:
+            events = db.execute(
+                "SELECT details FROM audit_events WHERE entity_id=? AND event_type='task_status_changed' ORDER BY id",
+                (str(task_id),),
+            ).fetchall()
+        self.assertEqual(len(events), 2)
+        self.assertIn("queued -> running; actor=task_runner", events[0]["details"])
+        self.assertIn("running -> completed; actor=task_runner", events[1]["details"])
+
     def test_unapproved_tool_fails_task_safely(self):
         task_id = core.add_task("Try tool")
         with self.assertRaises(ValueError):
@@ -83,6 +97,28 @@ class TaskRunnerTests(unittest.TestCase):
     def test_recovery_rejects_unreasonable_threshold(self):
         with self.assertRaises(ValueError):
             task_runner.recover_stale_tasks(0)
+
+
+    def test_sensitive_task_requires_explicit_runtime_approval(self):
+        contract = tool_lab.TOOL_REGISTRY["word_count"]
+        previous = contract["approval_required"]
+        contract["approval_required"] = True
+        try:
+            self.make_approved_tool()
+            task_id = core.add_task("Sensitive task")
+
+            with self.assertRaisesRegex(ValueError, "explicit runtime approval"):
+                task_runner.execute_task(task_id, "count_demo", "hello world")
+
+            self.assertEqual(self.task_status(task_id)["status"], "queued")
+
+            result = task_runner.execute_task(
+                task_id, "count_demo", "hello world", runtime_approved=True
+            )
+            self.assertEqual(result["words"], 2)
+            self.assertEqual(self.task_status(task_id)["status"], "completed")
+        finally:
+            contract["approval_required"] = previous
 
 
 if __name__ == "__main__":
