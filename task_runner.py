@@ -14,6 +14,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import core
+import task_manager
 import tool_lab
 
 
@@ -38,15 +39,25 @@ def recover_stale_tasks(older_than_minutes: int = 60) -> int:
     if not isinstance(older_than_minutes, int) or isinstance(older_than_minutes, bool) or not 1 <= older_than_minutes <= 10080:
         raise ValueError("older-than-minutes must be between 1 and 10080")
     cutoff = (datetime.now(timezone.utc) - timedelta(minutes=older_than_minutes)).isoformat(timespec="seconds")
-    stamp = now()
     with core.connect() as db:
-        cur = db.execute(
-            """UPDATE tasks
-               SET status='failed', result=?, updated_at=?
-               WHERE status='running' AND updated_at < ?""",
-            ("Recovered as failed: task was left running after an interruption.", stamp, cutoff),
-        )
-        count = cur.rowcount
+        rows = db.execute(
+            "SELECT id FROM tasks WHERE status='running' AND updated_at < ? ORDER BY id",
+            (cutoff,),
+        ).fetchall()
+    count = 0
+    for row in rows:
+        try:
+            task_manager.transition_status(
+                int(row["id"]), "failed", expected_status="running",
+                actor="recovery",
+                details="stale task marked failed; execution is not automatically resumed",
+                result="Recovered as failed: task was left running after an interruption.",
+                execution_transition=True,
+            )
+            count += 1
+        except ValueError:
+            # A concurrent worker may have changed this task after the scan.
+            continue
     return count
 
 
@@ -59,32 +70,35 @@ def execute_task(task_id: int, tool_name: str, input_text: str) -> Any:
             raise ValueError("task does not exist")
         if task["status"] != "queued":
             raise ValueError(f"task must be queued; current status is {task['status']}")
-        stamp = now()
-        db.execute(
-            "UPDATE tasks SET status='running', result=NULL, updated_at=? WHERE id=? AND status='queued'",
-            (stamp, task_id),
-        )
-        if db.execute("SELECT changes()").fetchone()[0] != 1:
-            raise ValueError("task state changed; refusing to run")
+        # Leave the task result intact until the runner owns the transition.
+    task_manager.transition_status(
+        task_id, "running", expected_status="queued", actor="task_runner",
+        details=f"tool={tool_name}", result=None, execution_transition=True,
+    )
     try:
         result = tool_lab.run_approved(tool_name, input_text)
         result_text = json.dumps(result, ensure_ascii=False)
     except Exception as exc:
-        with core.connect() as db:
-            db.execute(
-                "UPDATE tasks SET status='failed', result=?, updated_at=? WHERE id=? AND status='running'",
-                (f"{type(exc).__name__}: {exc}"[:2000], now(), task_id),
+        try:
+            task_manager.transition_status(
+                task_id, "failed", expected_status="running", actor="task_runner",
+                details=f"tool={tool_name}; exception={type(exc).__name__}",
+                result=f"{type(exc).__name__}: {exc}"[:2000],
+                execution_transition=True,
             )
+        except ValueError:
+            # Preserve the original exception if another actor changed task state.
+            pass
         try:
             tool_lab.audit("task_failed", tool_name, f"task:{task_id}")
         except OSError:
             pass
         raise
-    with core.connect() as db:
-        db.execute(
-            "UPDATE tasks SET status='completed', result=?, updated_at=? WHERE id=? AND status='running'",
-            (result_text[:12000], now(), task_id),
-        )
+    task_manager.transition_status(
+        task_id, "completed", expected_status="running", actor="task_runner",
+        details=f"tool={tool_name}; tool execution succeeded",
+        result=result_text[:12000], execution_transition=True,
+    )
     tool_lab.audit("task_completed", tool_name, f"task:{task_id}")
     return result
 
