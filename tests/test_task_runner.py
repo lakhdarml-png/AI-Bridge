@@ -50,6 +50,20 @@ class TaskRunnerTests(unittest.TestCase):
         self.assertEqual(row["status"], "completed")
         self.assertEqual(json.loads(row["result"]), result)
 
+
+    def test_execution_transitions_are_audited_atomically(self):
+        self.make_approved_tool()
+        task_id = core.add_task("Audit transitions")
+        task_runner.execute_task(task_id, "count_demo", "audit me")
+        with core.connect() as db:
+            events = db.execute(
+                "SELECT details FROM audit_events WHERE entity_id=? AND event_type='task_status_changed' ORDER BY id",
+                (str(task_id),),
+            ).fetchall()
+        self.assertEqual(len(events), 2)
+        self.assertIn("queued -> running; actor=task_runner", events[0]["details"])
+        self.assertIn("running -> completed; actor=task_runner", events[1]["details"])
+
     def test_unapproved_tool_fails_task_safely(self):
         task_id = core.add_task("Try tool")
         with self.assertRaises(ValueError):
