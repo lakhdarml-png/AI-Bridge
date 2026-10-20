@@ -70,7 +70,7 @@ def transition_status(
         if new_status not in TRANSITIONS.get(old_status, set()):
             raise ValueError(f"transition not allowed: {old_status} -> {new_status}")
         cur = db.execute(
-            "UPDATE tasks SET status=?, result=COALESCE(?, result), updated_at=? WHERE id=? AND status=?",
+            "UPDATE tasks SET status=?, result=?, updated_at=? WHERE id=? AND status=?",
             (new_status, result, stamp, task_id, old_status),
         )
         if cur.rowcount != 1:
