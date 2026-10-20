@@ -1,25 +1,24 @@
-# AI Bridge — الجسر الذكي
+# NEO-LOCAL
 
-تطبيق Android لتنسيق التعاون بين **ChatGPT** و **Grok**.
+A local-first, resumable AI agent for Android/Termux. The objective is an end-to-end workflow: accept a goal, plan, execute approved allowlisted tools, verify the result, recover safely from interruptions, and deliver a clear report.
 
-## المميزات
-- نسخ الرسالة وفتح التطبيق المطلوب بزر واحد.
-- استلام آخر رد تلقائيًا عبر **خدمة إمكانية الوصول** (أو من الحافظة كخيار احتياطي).
-- حفظ سجل الجلسة مع تمييز واضح لكل مساعد.
-- تجهيز نص المراجعة تلقائيًا.
+> Development is underway on `neo-local-v1-integration`. This branch is an integration workspace; it does not claim that the complete runtime has already been imported or validated.
 
-## طريقة الاستخدام
-1. فعّل خدمة إمكانية الوصول مرة واحدة:
-   - اذهب إلى إعدادات الهاتف → إمكانية الوصول → AI Bridge → فعّل.
-2. اكتب رسالتك داخل AI Bridge.
-3. اضغط «نسخ النص وفتح ChatGPT» أو «نسخ النص وفتح Grok».
-4. بعد أن يرد المساعد، ارجع إلى AI Bridge واضغط «استلام آخر رد».
-5. التطبيق سيحاول قراءة الرد تلقائيًا.
+## Engineering principles
+- Evidence over assumptions.
+- End-to-end capability over file count.
+- Reuse the existing Termux implementation before rewriting it.
+- Explicit state transitions and goal-level acceptance criteria.
+- Allowlisted tools, bounded execution, auditability, and approval for risky actions.
+- No success claim without relevant test evidence.
 
-## ملاحظات مهمة
-- قراءة الرد تلقائيًا تعتمد على هيكل واجهة ChatGPT وGrok الحالي. إذا تغيّر التصميم قد تحتاج تحديثًا.
-- الخدمة تعمل محليًا فقط ولا ترسل أي بيانات خارج هاتفك.
-- يمكنك دائمًا النسخ اليدوي كخيار احتياطي.
+## Documents
+- [Target architecture](docs/NEO_LOCAL_ARCHITECTURE.md)
+- [Delivery roadmap](docs/NEO_LOCAL_ROADMAP.md)
+- [Reference-project review](docs/REFERENCE_PROJECTS.md)
 
-## البناء
-من GitHub Actions → **Build Debug APK** → نزّل `ai-bridge-debug`.
+## Current status
+The branch establishes the target architecture and delivery gates. The next step is to inventory the actual NEO-LOCAL source from the Termux working directory, then implement the highest-impact integration gap. The source files must be transferred from the actual local project; they are not assumed to exist in this repository yet.
+
+## Development rule
+Keep the stable branch intact. Use focused commits and verify changes on the phone before calling them complete.
