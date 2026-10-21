@@ -1,18 +1,11 @@
 # NEO-LOCAL
 
-A local-first, resumable personal agent for Android/Termux. The target workflow is to understand a goal, plan, execute approved allowlisted tools, verify the result, recover safely from interruptions, and deliver a clear report.
+A local-first personal agent with a dedicated Android control panel and a Python core.
 
-> Active work branch: `neo-local-v1-five-layer-blueprint`. The stable branch remains unchanged. This branch contains the five-layer blueprint and the first source-level Android-to-Termux core-status connection; the connection has not yet been built or verified on a physical phone.
+> Active development branch: `neo-local-v1-five-layer-blueprint`. The stable branch remains unchanged.
 
-## Engineering principles
-- Evidence over assumptions.
-- End-to-end capability over file count.
-- Reuse the existing Termux implementation before rewriting it.
-- Explicit state transitions and goal-level acceptance criteria.
-- Allowlisted tools, bounded execution, auditability, and approval for risky actions.
-- No success claim without relevant test evidence.
-- Local-only functionality remains independent of optional API providers.
-- Explicit approval before sensitive changes, deletion, external actions, or permission changes.
+## Purpose
+NEO-LOCAL is intended to inspect project files, diagnose issues, plan work, execute narrowly allowlisted tasks, verify outcomes, and request explicit approval before sensitive changes. The Android app is a control panel for the NEO-LOCAL core, not a chat-copying utility.
 
 ## Architecture and plan
 - [Target architecture](docs/NEO_LOCAL_ARCHITECTURE.md)
@@ -20,19 +13,28 @@ A local-first, resumable personal agent for Android/Termux. The target workflow 
 - [Five-layer implementation blueprint](docs/NEO_LOCAL_FIVE_LAYER_BLUEPRINT.md)
 - [Reference-project review](docs/REFERENCE_PROJECTS.md)
 
-## Current implementation snapshot
-- Python core, planning/task modules, tools, bridge, and tests exist in this branch.
-- The Termux bridge remains bound to `127.0.0.1:8766` and accepts only registered actions; a fixed read-only `core_status` action has been added.
-- The Android UI now has a button to request core status from the local bridge and display the response or a connection error.
-- Android network cleartext permission is scoped to the loopback address in a network security configuration.
-- These source changes are **implemented in this branch**, but Android build, bridge-to-app integration, and physical-device behavior remain **not yet verified**.
-- The GitHub snapshot may not include unpushed commits from the user's separate Termux working branch.
+## Current implementation
+- Python core, planning/task modules, allowlisted tools, bridge, and tests.
+- Android NEO-LOCAL control panel with **Start bridge**, **Stop bridge**, and **Check connection**.
+- Starting and stopping requires confirmation in the Android app.
+- The bridge binds only to `127.0.0.1:8766`; it does not accept arbitrary shell commands.
+- The legacy copy/paste ChatGPT/Grok screen and its accessibility service have been removed from the Android app.
+- GitHub Actions builds the debug APK and runs the Python test suite. A successful CI build does not replace physical-device verification.
 
-## First use of the new connection
-1. In Termux, enter the project directory that contains `termux_bridge.py`.
-2. Run `python termux_bridge.py` and leave that session running.
-3. Open the built Android app and tap **فحص اتصال النواة المحلية**.
-4. A connection failure should be reported clearly; do not treat a source edit as proof that the integration works.
+## One-time Termux setup
+The current Python core runs in Termux. To let the Android panel start it in the background without opening the Termux interface each time:
 
-## Development rule
-Keep the stable branch intact. Use focused commits and verify changes on the phone before calling them complete. Do not expose arbitrary shell execution through the bridge.
+1. Keep Termux installed and make sure the project folder contains `termux_bridge.py` and `core.py`.
+2. In Termux settings, enable **Allow external apps**.
+3. Grant NEO-LOCAL the Termux `RUN_COMMAND` permission if Android requests it.
+4. In the app, set the actual absolute project directory under Termux's home folder. The initial path shown is only a default and must match the folder on your phone.
+5. Tap **تشغيل الجسر**, confirm, then tap **فحص اتصال الجسر والنواة**.
+6. To stop the bridge, tap **إيقاف الجسر** and confirm.
+
+If the permission is not enabled, the app must report the failure; it must not claim the bridge started. No arbitrary command execution is exposed by the bridge.
+
+## Safety and development rules
+- Preserve the stable branch; work on the development branch until changes are verified.
+- Ask before sensitive changes, deletions, permission changes, or external actions.
+- Prefer evidence over assumptions and avoid repeated low-value tests.
+- Do not claim physical-device behavior is verified until it has been tested on the phone.
