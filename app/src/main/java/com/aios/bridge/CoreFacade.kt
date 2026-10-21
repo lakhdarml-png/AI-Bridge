@@ -18,7 +18,9 @@ object CoreFacade {
         val py = Python.getInstance()
         if (!initialized) {
             // Must happen before importing core: its APP_HOME/DB_PATH are set at import time.
-            py.getModule("os").get("environ").callAttr(
+            val environment = py.getModule("os").get("environ")
+                ?: error("Python os.environ could not be accessed")
+            environment.callAttr(
                 "__setitem__", "NEO_LOCAL_HOME", context.applicationContext.filesDir.resolve("neo_local").absolutePath
             )
             module = py.getModule("android_facade")
