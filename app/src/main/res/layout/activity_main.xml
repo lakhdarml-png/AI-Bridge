@@ -53,6 +53,7 @@
   <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
    android:text="نتائج النواة" android:textColor="@color/gold" android:textStyle="bold"
    android:textSize="16sp" android:layout_marginBottom="6dp"/>
+  <LinearLayout android:id="@+id/structuredResults" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone" android:layout_marginBottom="8dp"/>
   <TextView android:id="@+id/outputResponse" android:layout_width="match_parent"
    android:layout_height="wrap_content" android:minHeight="180dp" android:textColor="#FFFFFF"
    android:textSize="14sp" android:lineSpacingExtra="4dp" android:padding="14dp"
