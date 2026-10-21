@@ -34,9 +34,8 @@ chaquopy {
     }
     sourceSets {
         getByName("main") {
-            // Only package sources, not the repository root/build outputs.
-            srcDir("../")
-            include("neo_local/**")
+            // This directory contains only the Python package modules.
+            srcDir("../neo_local")
         }
     }
 }
