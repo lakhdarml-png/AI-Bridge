@@ -1,136 +1,116 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#121212"
-    android:fillViewport="true">
+ android:id="@+id/rootScroll" android:layout_width="match_parent" android:layout_height="match_parent"
+ android:background="#121212" android:fillViewport="true">
+ <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+  android:orientation="vertical" android:padding="18dp" android:layoutDirection="rtl">
+  <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+   android:text="NEO-LOCAL" android:textColor="@color/gold" android:textSize="30sp"
+   android:textStyle="bold" android:gravity="center" android:layout_marginTop="12dp"/>
+  <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+   android:text="النواة المحلية المدمجة" android:textColor="#FFFFFF" android:textSize="18sp"
+   android:gravity="center" android:layout_marginBottom="18dp"/>
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp"
-        android:layoutDirection="rtl">
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="AI Bridge | الجسر الذكي"
-            android:textColor="@color/gold"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:gravity="center"
-            android:layout_marginBottom="6dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="انسخ الرد من المساعد، استلمه هنا، ثم انقله للمساعد الآخر. كل رد يظهر باسمه بوضوح."
-            android:textColor="#CCCCCC"
-            android:textSize="14sp"
-            android:lineSpacingExtra="3dp"
-            android:layout_marginBottom="12dp" />
-
-        <ScrollView
-            android:id="@+id/scrollConversation"
-            android:layout_width="match_parent"
-            android:layout_height="280dp"
-            android:fillViewport="true"
-            android:background="#1E1E1E"
-            android:layout_marginBottom="12dp">
-
-            <TextView
-                android:id="@+id/outputResponse"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textColor="#FFFFFF"
-                android:textSize="15sp"
-                android:lineSpacingExtra="4dp"
-                android:padding="12dp"
-                android:textIsSelectable="true" />
-        </ScrollView>
-
-        <EditText
-            android:id="@+id/inputRequest"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="اكتب الرسالة أو تعليمات مراجعة الرد..."
-            android:textColor="#FFFFFF"
-            android:textColorHint="#888888"
-            android:backgroundTint="@color/gold"
-            android:gravity="top|start"
-            android:lines="4"
-            android:minLines="4"
-            android:maxLines="10"
-            android:minHeight="110dp"
-            android:padding="12dp"
-            android:inputType="textMultiLine|textCapSentences|textNoSuggestions"
-            android:scrollbars="vertical"
-            android:layout_marginBottom="12dp" />
-
-        <!-- مجموعة ChatGPT -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="ChatGPT"
-            android:textColor="@color/chatgpt_blue"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="4dp" />
-
-        <Button
-            android:id="@+id/btnSendChatgpt"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="نسخ النص وفتح ChatGPT"
-            android:textAllCaps="false"
-            android:backgroundTint="@color/chatgpt_blue"
-            android:textColor="#FFFFFF" />
-
-        <Button
-            android:id="@+id/btnCaptureChatgpt"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="استلام آخر رد من ChatGPT"
-            android:textAllCaps="false"
-            android:backgroundTint="#1A3A5C"
-            android:textColor="#FFFFFF"
-            android:layout_marginBottom="12dp" />
-
-        <!-- مجموعة Grok -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Grok"
-            android:textColor="@color/grok_purple"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="4dp" />
-
-        <Button
-            android:id="@+id/btnSendGrok"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="نسخ النص وفتح Grok"
-            android:textAllCaps="false"
-            android:backgroundTint="@color/grok_purple"
-            android:textColor="#FFFFFF" />
-
-        <Button
-            android:id="@+id/btnCaptureGrok"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="استلام آخر رد من Grok"
-            android:textAllCaps="false"
-            android:backgroundTint="#3A1A5C"
-            android:textColor="#FFFFFF" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="مهم: النسخ واللصق والإرسال داخل التطبيقات يتم بواسطتك. لا يحتاج التطبيق إلى إذن إمكانية الوصول أو مفتاح API أو إنترنت."
-            android:textColor="#999999"
-            android:textSize="12sp"
-            android:layout_marginTop="14dp" />
-    </LinearLayout>
+  <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+   android:text="الغرفة المشتركة — ChatGPT + Grok" android:textColor="@color/gold"
+   android:textStyle="bold" android:textSize="19sp" android:layout_marginTop="10dp"
+   android:layout_marginBottom="8dp"/>
+  <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+   android:text="اتصال مباشر بواجهات النماذج عبر API. أدخل مفاتيحك بنفسك؛ تُحفظ مشفّرة على الهاتف. MCP للأدوات المحلية سيكون طبقة منفصلة."
+   android:textColor="#BBBBBB" android:textSize="12sp" android:lineSpacingExtra="3dp"
+   android:layout_marginBottom="8dp"/>
+  <EditText android:id="@+id/openAiKeyInput" android:layout_width="match_parent"
+   android:layout_height="wrap_content" android:hint="مفتاح OpenAI API"
+   android:inputType="textPassword" android:singleLine="true" android:textColor="#FFFFFF"
+   android:textColorHint="#999999" android:backgroundTint="@color/gold"
+   android:importantForAutofill="no" android:layout_marginBottom="6dp"/>
+  <EditText android:id="@+id/xAiKeyInput" android:layout_width="match_parent"
+   android:layout_height="wrap_content" android:hint="مفتاح xAI API لـ Grok"
+   android:inputType="textPassword" android:singleLine="true" android:textColor="#FFFFFF"
+   android:textColorHint="#999999" android:backgroundTint="@color/gold"
+   android:importantForAutofill="no" android:layout_marginBottom="6dp"/>
+  <Button android:id="@+id/btnSaveProviderKeys" android:layout_width="match_parent"
+   android:layout_height="wrap_content" android:text="حفظ مفاتيح الاتصال بأمان"
+   android:textAllCaps="false" android:backgroundTint="#303030" android:textColor="#FFFFFF"
+   android:layout_marginBottom="10dp"/>
+  <EditText android:id="@+id/roomPromptInput" android:layout_width="match_parent"
+   android:layout_height="wrap_content" android:hint="اكتب رسالتك للغرفة المشتركة"
+   android:inputType="textMultiLine" android:minLines="2" android:textColor="#FFFFFF"
+   android:textColorHint="#999999" android:backgroundTint="@color/gold"
+   android:layout_marginBottom="6dp"/>
+  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+   android:orientation="horizontal" android:layout_marginBottom="8dp">
+   <Button android:id="@+id/btnAskChatGpt" android:layout_width="0dp"
+    android:layout_height="wrap_content" android:layout_weight="1" android:text="اسأل ChatGPT"
+    android:textAllCaps="false" android:backgroundTint="@color/gold" android:textColor="#121212"/>
+   <Button android:id="@+id/btnAskGrok" android:layout_width="0dp"
+    android:layout_height="wrap_content" android:layout_weight="1" android:text="اسأل Grok"
+    android:textAllCaps="false" android:backgroundTint="#303030" android:textColor="#FFFFFF"/>
+  </LinearLayout>
+  <Button android:id="@+id/btnAskBoth" android:layout_width="match_parent"
+   android:layout_height="wrap_content" android:text="أرسل إلى الاثنين واعرض الردين"
+   android:textAllCaps="false" android:backgroundTint="#294B3B" android:textColor="#FFFFFF"
+   android:layout_marginBottom="8dp"/>
+  <TextView android:id="@+id/roomStatus" android:layout_width="match_parent"
+   android:layout_height="wrap_content" android:text="الغرفة: لم يتم الاتصال بعد"
+   android:textColor="@color/gold" android:textSize="13sp" android:padding="8dp"
+   android:layout_marginBottom="6dp"/>
+  <TextView android:id="@+id/roomResponses" android:layout_width="match_parent"
+   android:layout_height="wrap_content" android:minHeight="80dp" android:textColor="#FFFFFF"
+   android:textSize="14sp" android:lineSpacingExtra="4dp" android:padding="12dp"
+   android:background="#1E1E1E" android:textIsSelectable="true"
+   android:layout_marginBottom="16dp"/>
+  <TextView android:id="@+id/coreConnectionStatus" android:layout_width="match_parent"
+   android:layout_height="wrap_content" android:text="حالة النواة: لم يتم الفحص"
+   android:textColor="@color/gold" android:textSize="15sp" android:padding="14dp"
+   android:background="#1E1E1E" android:layout_marginBottom="10dp"/>
+  <Button android:id="@+id/btnCheckCore" android:layout_width="match_parent"
+   android:layout_height="wrap_content" android:text="فحص النواة المدمجة"
+   android:textAllCaps="false" android:backgroundTint="@color/gold" android:textColor="#121212"
+   android:layout_marginBottom="14dp"/>
+  <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+   android:text="إضافة مهمة محلية" android:textColor="@color/gold" android:textStyle="bold"
+   android:textSize="16sp" android:layout_marginBottom="6dp"/>
+  <EditText android:id="@+id/taskInput" android:layout_width="match_parent"
+   android:layout_height="wrap_content" android:hint="اكتب هدف المهمة"
+   android:inputType="textMultiLine" android:minLines="2" android:textColor="#FFFFFF"
+   android:textColorHint="#999999" android:backgroundTint="@color/gold"
+   android:layout_marginBottom="6dp"/>
+  <Button android:id="@+id/btnAddTask" android:layout_width="match_parent"
+   android:layout_height="wrap_content" android:text="حفظ المهمة"
+   android:textAllCaps="false" android:backgroundTint="#294B3B" android:textColor="#FFFFFF"
+   android:layout_marginBottom="14dp"/>
+  <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+   android:text="حفظ ذاكرة محلية" android:textColor="@color/gold" android:textStyle="bold"
+   android:textSize="16sp" android:layout_marginBottom="6dp"/>
+  <EditText android:id="@+id/memoryTitle" android:layout_width="match_parent"
+   android:layout_height="wrap_content" android:hint="عنوان الذاكرة"
+   android:singleLine="true" android:textColor="#FFFFFF" android:textColorHint="#999999"
+   android:backgroundTint="@color/gold" android:layout_marginBottom="6dp"/>
+  <EditText android:id="@+id/memoryContent" android:layout_width="match_parent"
+   android:layout_height="wrap_content" android:hint="محتوى الذاكرة"
+   android:inputType="textMultiLine" android:minLines="2" android:textColor="#FFFFFF"
+   android:textColorHint="#999999" android:backgroundTint="@color/gold"
+   android:layout_marginBottom="6dp"/>
+  <Button android:id="@+id/btnRemember" android:layout_width="match_parent"
+   android:layout_height="wrap_content" android:text="حفظ الذاكرة"
+   android:textAllCaps="false" android:backgroundTint="#294B3B" android:textColor="#FFFFFF"
+   android:layout_marginBottom="14dp"/>
+  <Button android:id="@+id/btnRecall" android:layout_width="match_parent"
+   android:layout_height="wrap_content" android:text="عرض المهام والذكريات"
+   android:textAllCaps="false" android:backgroundTint="#303030" android:textColor="#FFFFFF"
+   android:layout_marginBottom="14dp"/>
+  <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+   android:text="نتائج النواة" android:textColor="@color/gold" android:textStyle="bold"
+   android:textSize="16sp" android:layout_marginBottom="6dp"/>
+  <LinearLayout android:id="@+id/structuredResults" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone" android:layout_marginBottom="8dp"/>
+  <TextView android:id="@+id/outputResponse" android:layout_width="match_parent"
+   android:layout_height="wrap_content" android:minHeight="180dp" android:textColor="#FFFFFF"
+   android:textSize="14sp" android:lineSpacingExtra="4dp" android:padding="14dp"
+   android:background="#1E1E1E" android:textIsSelectable="true"/>
+  <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+   android:text="هذه النسخة تستدعي Python داخل التطبيق مباشرة. الوصول إلى مجلدات المشاريع الخارجية سيضاف عبر اختيار مجلد وصلاحيات Android، وليس عبر مسارات Termux الخاصة."
+   android:textColor="#999999" android:textSize="12sp" android:lineSpacingExtra="3dp"
+   android:layout_marginTop="14dp" android:layout_marginBottom="12dp"/>
+ </LinearLayout>
 </ScrollView>

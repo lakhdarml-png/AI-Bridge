@@ -1,25 +1,41 @@
-# AI Bridge — الجسر الذكي
+# NEO-LOCAL
 
-تطبيق Android لتنسيق التعاون بين **ChatGPT** و **Grok**.
+A local-first personal agent with a dedicated Android control panel and a Python core.
 
-## المميزات
-- نسخ الرسالة وفتح التطبيق المطلوب بزر واحد.
-- استلام آخر رد تلقائيًا عبر **خدمة إمكانية الوصول** (أو من الحافظة كخيار احتياطي).
-- حفظ سجل الجلسة مع تمييز واضح لكل مساعد.
-- تجهيز نص المراجعة تلقائيًا.
+> Active development branch: `neo-local-v1-five-layer-blueprint`. The stable branch remains unchanged.
 
-## طريقة الاستخدام
-1. فعّل خدمة إمكانية الوصول مرة واحدة:
-   - اذهب إلى إعدادات الهاتف → إمكانية الوصول → AI Bridge → فعّل.
-2. اكتب رسالتك داخل AI Bridge.
-3. اضغط «نسخ النص وفتح ChatGPT» أو «نسخ النص وفتح Grok».
-4. بعد أن يرد المساعد، ارجع إلى AI Bridge واضغط «استلام آخر رد».
-5. التطبيق سيحاول قراءة الرد تلقائيًا.
+## Purpose
+NEO-LOCAL is intended to inspect project files, diagnose issues, plan work, execute narrowly allowlisted tasks, verify outcomes, and request explicit approval before sensitive changes. The Android app is a control panel for the NEO-LOCAL core, not a chat-copying utility.
 
-## ملاحظات مهمة
-- قراءة الرد تلقائيًا تعتمد على هيكل واجهة ChatGPT وGrok الحالي. إذا تغيّر التصميم قد تحتاج تحديثًا.
-- الخدمة تعمل محليًا فقط ولا ترسل أي بيانات خارج هاتفك.
-- يمكنك دائمًا النسخ اليدوي كخيار احتياطي.
+## Architecture and plan
+- [Target architecture](docs/NEO_LOCAL_ARCHITECTURE.md)
+- [Five-phase delivery roadmap](docs/NEO_LOCAL_ROADMAP.md)
+- [Five-layer implementation blueprint](docs/NEO_LOCAL_FIVE_LAYER_BLUEPRINT.md)
+- [Reference-project review](docs/REFERENCE_PROJECTS.md)
+- [Chaquopy embedded-core migration plan](docs/CHAQUOPY_MIGRATION_PLAN.md)
 
-## البناء
-من GitHub Actions → **Build Debug APK** → نزّل `ai-bridge-debug`.
+## Current implementation
+- Python core, planning/task modules, allowlisted tools, bridge, and tests.
+- Current Android control panel still uses the Termux bridge; the approved next architecture is documented in the [Chaquopy migration plan](docs/CHAQUOPY_MIGRATION_PLAN.md).
+- Starting and stopping requires confirmation in the Android app.
+- The current bridge binds only to `127.0.0.1:8766` and does not accept arbitrary shell commands; it remains in place for rollback until the embedded core is verified.
+- The legacy copy/paste ChatGPT/Grok screen and its accessibility service have been removed from the Android app.
+- GitHub Actions builds the debug APK and runs the Python test suite. A successful CI build does not replace physical-device verification.
+
+## One-time Termux setup
+The current Python core runs in Termux. To let the Android panel start it in the background without opening the Termux interface each time:
+
+1. Keep Termux installed and make sure the project folder contains `termux_bridge.py` and `core.py`.
+2. In Termux settings, enable **Allow external apps**.
+3. Grant NEO-LOCAL the Termux `RUN_COMMAND` permission if Android requests it.
+4. In the app, set the actual absolute project directory under Termux's home folder. The initial path shown is only a default and must match the folder on your phone.
+5. Tap **تشغيل الجسر**, confirm, then tap **فحص اتصال الجسر والنواة**.
+6. To stop the bridge, tap **إيقاف الجسر** and confirm.
+
+If the permission is not enabled, the app must report the failure; it must not claim the bridge started. No arbitrary command execution is exposed by the bridge.
+
+## Safety and development rules
+- Preserve the stable branch; work on the development branch until changes are verified.
+- Ask before sensitive changes, deletions, permission changes, or external actions.
+- Prefer evidence over assumptions and avoid repeated low-value tests.
+- Do not claim physical-device behavior is verified until it has been tested on the phone.
