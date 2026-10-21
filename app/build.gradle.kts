@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("com.chaquo.python")
 }
 
 android {
@@ -11,8 +12,12 @@ android {
         applicationId = "com.aios.bridge"
         minSdk = 26
         targetSdk = 35
-        versionCode = 10
-        versionName = "0.8.0"
+        versionCode = 11
+        versionName = "0.9.0"
+
+        ndk {
+            abiFilters += listOf("arm64-v8a")
+        }
     }
 
     buildFeatures { viewBinding = true }
@@ -21,6 +26,18 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
+}
+
+chaquopy {
+    defaultConfig {
+        version = "3.13"
+    }
+    sourceSets {
+        getByName("main") {
+            // Keep the existing Python core as the single source of truth.
+            srcDir("../")
+        }
+    }
 }
 
 dependencies {
