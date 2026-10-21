@@ -12,6 +12,12 @@ class TermuxBridgeTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             termux_bridge.run_action("python -c 'print(1)'")
 
+    def test_core_status_is_a_fixed_read_only_command(self):
+        self.assertEqual(
+            termux_bridge.ACTIONS["core_status"],
+            [termux_bridge.sys.executable, "core.py", "status"],
+        )
+
     @patch("termux_bridge.subprocess.run")
     def test_action_uses_no_shell_and_fixed_timeout(self, run):
         run.return_value = SimpleNamespace(returncode=0, stdout="ok", stderr="")
