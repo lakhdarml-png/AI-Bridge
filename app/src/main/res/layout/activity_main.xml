@@ -1,140 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#121212"
-    android:fillViewport="true">
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp"
-        android:layoutDirection="rtl">
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="NEO-LOCAL | الوكيل المحلي"
-            android:textColor="@color/gold"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:gravity="center"
-            android:layout_marginBottom="6dp" />
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="مساحة عمل محلية شخصية. الاتصال بالنواة اختياري ويعمل عبر جسر Termux المحلي."
-            android:textColor="#CCCCCC"
-            android:textSize="14sp"
-            android:lineSpacingExtra="3dp"
-            android:layout_marginBottom="12dp" />
-        <TextView
-            android:id="@+id/coreConnectionStatus"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="لم يتم فحص اتصال النواة بعد."
-            android:textColor="#E5A93C"
-            android:textSize="14sp"
-            android:padding="10dp"
-            android:background="#1E1E1E"
-            android:layout_marginBottom="6dp" />
-        <Button
-            android:id="@+id/btnCheckCore"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="فحص اتصال النواة المحلية"
-            android:textAllCaps="false"
-            android:backgroundTint="@color/gold"
-            android:textColor="#121212"
-            android:layout_marginBottom="12dp" />
-        <ScrollView
-            android:id="@+id/scrollConversation"
-            android:layout_width="match_parent"
-            android:layout_height="280dp"
-            android:fillViewport="true"
-            android:background="#1E1E1E"
-            android:layout_marginBottom="12dp">
-            <TextView
-                android:id="@+id/outputResponse"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textColor="#FFFFFF"
-                android:textSize="15sp"
-                android:lineSpacingExtra="4dp"
-                android:padding="12dp"
-                android:textIsSelectable="true" />
-        </ScrollView>
-        <EditText
-            android:id="@+id/inputRequest"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="اكتب رسالة أو تعليمات مراجعة الرد..."
-            android:textColor="#FFFFFF"
-            android:textColorHint="#888888"
-            android:backgroundTint="@color/gold"
-            android:gravity="top|start"
-            android:lines="4"
-            android:minLines="4"
-            android:maxLines="10"
-            android:minHeight="110dp"
-            android:padding="12dp"
-            android:inputType="textMultiLine|textCapSentences|textNoSuggestions"
-            android:scrollbars="vertical"
-            android:layout_marginBottom="12dp" />
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="ChatGPT"
-            android:textColor="@color/chatgpt_blue"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="4dp" />
-        <Button
-            android:id="@+id/btnSendChatgpt"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="نسخ النص وفتح ChatGPT"
-            android:textAllCaps="false"
-            android:backgroundTint="@color/chatgpt_blue"
-            android:textColor="#FFFFFF" />
-        <Button
-            android:id="@+id/btnCaptureChatgpt"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="استلام آخر رد من ChatGPT"
-            android:textAllCaps="false"
-            android:backgroundTint="#1A3A5C"
-            android:textColor="#FFFFFF"
-            android:layout_marginBottom="12dp" />
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Grok"
-            android:textColor="@color/grok_purple"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="4dp" />
-        <Button
-            android:id="@+id/btnSendGrok"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="نسخ النص وفتح Grok"
-            android:textAllCaps="false"
-            android:backgroundTint="@color/grok_purple"
-            android:textColor="#FFFFFF" />
-        <Button
-            android:id="@+id/btnCaptureGrok"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="استلام آخر رد من Grok"
-            android:textAllCaps="false"
-            android:backgroundTint="#3A1A5C"
-            android:textColor="#FFFFFF" />
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="الإجراءات الحساسة والتعديلات ستحتاج موافقتك الصريحة. خدمة إمكانية الوصول اختيارية."
-            android:textColor="#999999"
-            android:textSize="12sp"
-            android:layout_marginTop="14dp" />
-    </LinearLayout>
+ android:layout_width="match_parent" android:layout_height="match_parent"
+ android:background="#121212" android:fillViewport="true">
+ <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+  android:orientation="vertical" android:padding="18dp" android:layoutDirection="rtl">
+  <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+   android:text="NEO-LOCAL" android:textColor="@color/gold" android:textSize="30sp"
+   android:textStyle="bold" android:gravity="center" android:layout_marginTop="12dp"/>
+  <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+   android:text="لوحة تحكّم الوكيل المحلي" android:textColor="#FFFFFF" android:textSize="18sp"
+   android:gravity="center" android:layout_marginBottom="18dp"/>
+  <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+   android:text="مجلد مشروع النواة داخل Termux" android:textColor="#CCCCCC" android:textSize="14sp"
+   android:layout_marginBottom="6dp"/>
+  <EditText android:id="@+id/projectPath" android:layout_width="match_parent"
+   android:layout_height="wrap_content"
+   android:text="/data/data/com.termux/files/home/neo-local-v1-workflow-test"
+   android:singleLine="true" android:textColor="#FFFFFF" android:backgroundTint="@color/gold"
+   android:padding="12dp" android:inputType="textNoSuggestions" android:layout_marginBottom="12dp"/>
+  <TextView android:id="@+id/coreConnectionStatus" android:layout_width="match_parent"
+   android:layout_height="wrap_content" android:text="حالة الجسر: لم يتم الفحص بعد"
+   android:textColor="@color/gold" android:textSize="15sp" android:padding="14dp"
+   android:background="#1E1E1E" android:layout_marginBottom="10dp"/>
+  <Button android:id="@+id/btnStartBridge" android:layout_width="match_parent"
+   android:layout_height="wrap_content" android:text="تشغيل الجسر" android:textAllCaps="false"
+   android:textSize="16sp" android:backgroundTint="@color/gold" android:textColor="#121212"
+   android:layout_marginBottom="8dp"/>
+  <Button android:id="@+id/btnStopBridge" android:layout_width="match_parent"
+   android:layout_height="wrap_content" android:text="إيقاف الجسر" android:textAllCaps="false"
+   android:textSize="16sp" android:backgroundTint="#7A2929" android:textColor="#FFFFFF"
+   android:layout_marginBottom="8dp"/>
+  <Button android:id="@+id/btnCheckCore" android:layout_width="match_parent"
+   android:layout_height="wrap_content" android:text="فحص اتصال الجسر والنواة"
+   android:textAllCaps="false" android:backgroundTint="#294B3B" android:textColor="#FFFFFF"
+   android:layout_marginBottom="14dp"/>
+  <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+   android:text="سجل الحالة" android:textColor="@color/gold" android:textStyle="bold"
+   android:textSize="16sp" android:layout_marginBottom="6dp"/>
+  <TextView android:id="@+id/outputResponse" android:layout_width="match_parent"
+   android:layout_height="wrap_content" android:minHeight="180dp" android:textColor="#FFFFFF"
+   android:textSize="14sp" android:lineSpacingExtra="4dp" android:padding="14dp"
+   android:background="#1E1E1E" android:textIsSelectable="true"/>
+  <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+   android:text="الإعداد الأولي: يحتاج Termux إلى السماح بتشغيل الأوامر من التطبيقات الخارجية ومنح صلاحية RUN_COMMAND. بعد الإعداد، يتم التحكم من هذه اللوحة. كل تشغيل أو إيقاف يتطلب موافقتك."
+   android:textColor="#999999" android:textSize="12sp" android:lineSpacingExtra="3dp"
+   android:layout_marginTop="14dp" android:layout_marginBottom="12dp"/>
+ </LinearLayout>
 </ScrollView>
