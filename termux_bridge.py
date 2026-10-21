@@ -22,6 +22,7 @@ TIMEOUT_SECONDS = 120
 
 ACTIONS: dict[str, list[str]] = {
     "status": ["git", "status", "--short", "--branch"],
+    "core_status": [sys.executable, "core.py", "status"],
     "learn": [sys.executable, "tool_lab.py", "learn"],
     "list": [sys.executable, "tool_lab.py", "list"],
     "tests": [sys.executable, "-m", "unittest", "discover", "-s", "tests"],
@@ -61,7 +62,7 @@ def run_action(action: str) -> dict[str, Any]:
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "NEO-LOCAL-Bridge/0.1"
+    server_version = "NEO-LOCAL-Bridge/0.2"
 
     def _send(self, code: int, payload: dict[str, Any]) -> None:
         raw = json.dumps(payload, ensure_ascii=False).encode("utf-8")
@@ -76,7 +77,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/status":
             self._send(200, {
                 "service": "NEO-LOCAL Termux bridge",
-                "version": "0.1",
+                "version": "0.2",
                 "host": HOST,
                 "actions": sorted(ACTIONS),
                 "remote_access": False,
@@ -113,7 +114,6 @@ class Handler(BaseHTTPRequestHandler):
         self._send(200 if result["ok"] else 500, result)
 
     def log_message(self, fmt: str, *args: Any) -> None:
-        # Keep request logging minimal; action results are returned to the caller.
         return
 
 
