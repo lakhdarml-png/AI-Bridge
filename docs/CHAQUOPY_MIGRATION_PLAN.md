@@ -1,6 +1,6 @@
 # Chaquopy Migration Plan — NEO-LOCAL
 
-**Status:** compatibility review and migration plan only; no runtime or Gradle changes have been made yet.  
+**Status:** first embedded-runtime implementation committed to the development branch; CI and phone verification are pending.  
 **Working branch:** `neo-local-v1-five-layer-blueprint`  
 **Reviewed branch head:** `fd7ee4ad41d5d9e2722790e26f7ae16e3804495b`  
 **Stable `main` head at review:** `cf66c77adf7e07dc08305e20aa382e4d05212b96` (must remain unchanged).
@@ -67,6 +67,13 @@ No loopback HTTP bridge is needed between the UI and the in-process core. Any fu
 - Permission test: denied SAF access must produce a clear error and no unauthorized file access.
 - Regression test: no bridge process is required for core status or local task/memory functions.
 - Only report success for checks that actually ran; physical-device verification remains separate from CI success.
+
+## Implementation notes (first slice)
+
+- Chaquopy `17.1.0` and Python `3.13` are enabled only in the Android app module. The app ABI is initially restricted to `arm64-v8a` for a modern ARM64 phone; this is a build-coverage choice, not a claim of universal device support.
+- The existing root `core.py` implementation now lives canonically at `neo_local/core.py`; root `core.py` is a compatibility entry point so existing host imports continue to work.
+- `neo_local/android_facade.py` exposes only structured status, task creation, memory creation, and read-only listing. Kotlin sets `NEO_LOCAL_HOME` before importing the core and stores SQLite under the app-private files directory.
+- The Android UI no longer requires Termux or a loopback server for these operations. Project-folder SAF access and plan/runner integration remain later steps; no arbitrary shell or filesystem mutation endpoint was added.
 
 ## Acceptance gate
 
