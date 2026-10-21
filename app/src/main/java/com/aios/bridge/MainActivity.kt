@@ -1,11 +1,7 @@
 package com.aios.bridge
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.provider.Settings
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -16,41 +12,73 @@ import java.net.URL
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
-    private val history = StringBuilder()
-    private var latestReply = ""
-    private var latestReplyFrom = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        binding.outputResponse.text = """
-            |مرحبًا بك في NEO-LOCAL
-            |
-            |لفحص اتصال النواة: شغّل python termux_bridge.py داخل مجلد المشروع في Termux، ثم اضغط «فحص اتصال النواة».
-        """.trimMargin()
+        binding.btnStartBridge.setOnClickListener {
+            confirmBridgeAction("بدء جسر NEO-LOCAL", "سيُطلب من Termux تشغيل الجسر في الخلفية. هل توافق؟") { startBridge() }
+        }
+        binding.btnStopBridge.setOnClickListener {
+            confirmBridgeAction("إيقاف جسر NEO-LOCAL", "سيتم إيقاف عملية termux_bridge.py فقط. هل توافق؟") { stopBridge() }
+        }
         binding.btnCheckCore.setOnClickListener { checkCoreStatus() }
-        binding.btnSendChatgpt.setOnClickListener { copyAndOpen(CHATGPT_PACKAGE, "ChatGPT") }
-        binding.btnSendGrok.setOnClickListener { copyAndOpen(GROK_PACKAGE, "Grok") }
-        binding.btnCaptureChatgpt.setOnClickListener { receiveReply("ChatGPT") }
-        binding.btnCaptureGrok.setOnClickListener { receiveReply("Grok") }
-        checkAccessibilityAndGuide()
+        binding.outputResponse.text = "مرحبًا بك في لوحة تحكّم NEO-LOCAL.\n\nابدأ الجسر من هنا، ثم افحص اتصال النواة."
     }
 
-    override fun onResume() {
-        super.onResume()
-        checkAccessibilityAndGuide()
+    private fun confirmBridgeAction(title: String, message: String, action: () -> Unit) {
+        AlertDialog.Builder(this).setTitle(title).setMessage(message)
+            .setPositiveButton("أوافق، نفّذ") { _, _ -> action() }
+            .setNegativeButton("إلغاء", null).show()
+    }
+
+    private fun projectDirectory(): String {
+        val path = binding.projectPath.text.toString().trim().trimEnd('/')
+        require(path.startsWith("/data/data/com.termux/files/home/") &&
+            path.matches(Regex("[A-Za-z0-9_./-]+")) && !path.contains("..")) {
+            "أدخل مسار مجلد المشروع الصحيح داخل مجلد home في Termux."
+        }
+        return path
+    }
+
+    private fun runTermuxCommand(executable: String, arguments: Array<String>, workdir: String) {
+        try {
+            val intent = Intent("com.termux.RUN_COMMAND").apply {
+                setClassName("com.termux", "com.termux.app.RunCommandService")
+                putExtra("com.termux.RUN_COMMAND_PATH", executable)
+                putExtra("com.termux.RUN_COMMAND_ARGUMENTS", arguments)
+                putExtra("com.termux.RUN_COMMAND_WORKDIR", workdir)
+                putExtra("com.termux.RUN_COMMAND_BACKGROUND", true)
+            }
+            startService(intent)
+            binding.coreConnectionStatus.text = "أُرسل الطلب إلى Termux؛ افحص الحالة للتأكد."
+            log("تم إرسال أمر التحكّم", "لم يُعتبر التشغيل أو الإيقاف ناجحًا قبل فحص الحالة الفعلية.")
+        } catch (e: Exception) {
+            binding.coreConnectionStatus.text = "تعذّر إرسال الأمر إلى Termux"
+            log("تعذّر التحكّم بالجسر", "تحقق من تثبيت Termux وتفعيل السماح للتطبيقات الخارجية وصلاحية RUN_COMMAND.\n" + (e.localizedMessage ?: e.javaClass.simpleName))
+        }
+    }
+
+    private fun startBridge() {
+        val dir = try { projectDirectory() } catch (e: Exception) { toast(e.message ?: "مسار المشروع غير صالح"); return }
+        runTermuxCommand("/data/data/com.termux/files/usr/bin/python", arrayOf("$dir/termux_bridge.py"), dir)
+    }
+
+    private fun stopBridge() {
+        val dir = try { projectDirectory() } catch (e: Exception) { toast(e.message ?: "مسار المشروع غير صالح"); return }
+        runTermuxCommand("/data/data/com.termux/files/usr/bin/pkill", arrayOf("-f", "$dir/termux_bridge.py"), dir)
     }
 
     private fun checkCoreStatus() {
         binding.btnCheckCore.isEnabled = false
-        binding.coreConnectionStatus.text = "جارٍ الاتصال بالنواة المحلية…"
+        binding.coreConnectionStatus.text = "جارٍ فحص الجسر والنواة…"
         Thread({
             var connection: HttpURLConnection? = null
             try {
                 connection = (URL("$BRIDGE_BASE_URL/run").openConnection() as HttpURLConnection).apply {
                     requestMethod = "POST"
-                    connectTimeout = 3000
+                    connectTimeout = 2500
                     readTimeout = 8000
                     doOutput = true
                     setRequestProperty("Content-Type", "application/json; charset=utf-8")
@@ -65,91 +93,25 @@ class MainActivity : AppCompatActivity() {
                 val output = listOf(json.optString("stdout").trim(), json.optString("stderr").trim())
                     .filter { it.isNotBlank() }.joinToString("\n\n").ifBlank { response }
                 runOnUiThread {
-                    binding.coreConnectionStatus.text = if (ok) "متصلة بالنواة المحلية ✓" else "الجسر يعمل لكن فحص النواة فشل (HTTP $code)"
-                    addEntry(if (ok) "حالة النواة المحلية" else "نتيجة فحص النواة", output)
+                    binding.coreConnectionStatus.text = if (ok) "الجسر متصل والنواة تستجيب ✓" else "الجسر موجود لكن فحص النواة فشل (HTTP $code)"
+                    log(if (ok) "فحص النواة: ناجح" else "فحص النواة: لم ينجح", output)
                     binding.btnCheckCore.isEnabled = true
                 }
             } catch (e: Exception) {
                 runOnUiThread {
-                    binding.coreConnectionStatus.text = "غير متصلة — شغّل الجسر في Termux"
-                    addEntry("تعذّر الاتصال بالنواة", "شغّل الأمر: python termux_bridge.py\nالعنوان المحلي: $BRIDGE_BASE_URL\nالسبب: ${e.localizedMessage ?: e.javaClass.simpleName}")
+                    binding.coreConnectionStatus.text = "الجسر غير متصل"
+                    log("لا يوجد اتصال بالجسر", "ابدأ الجسر من زر التشغيل.\n" + (e.localizedMessage ?: e.javaClass.simpleName))
                     binding.btnCheckCore.isEnabled = true
                 }
-            } finally {
-                connection?.disconnect()
-            }
+            } finally { connection?.disconnect() }
         }, "neo-local-core-status").start()
     }
 
-    private fun checkAccessibilityAndGuide() {
-        if (!BridgeAccessibilityService.isEnabled(this)) {
-            val warning = "\n\n⚠️ خدمة إمكانية الوصول غير مفعّلة. يمكن استعمال النقل اليدوي للنصوص دونها."
-            if (!binding.outputResponse.text.contains("خدمة إمكانية الوصول غير مفعّلة")) binding.outputResponse.append(warning)
-        }
-    }
-
-    private fun copyAndOpen(packageName: String, appName: String) {
-        val draft = binding.inputRequest.text.toString().trim()
-        val text = if (draft.isNotEmpty()) draft else latestReply
-        if (text.isBlank()) {
-            toast("اكتب رسالة أو استلم ردًا أولًا.")
-            return
-        }
-        copyToClipboard(text)
-        addEntry(if (draft.isNotEmpty()) "أنت → $appName" else "رد $latestReplyFrom → $appName", text)
-        binding.inputRequest.text?.clear()
-        val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
-        if (launchIntent == null) {
-            toast("لم أجد تطبيق $appName. تأكد أنه مثبت.")
-            return
-        }
-        startActivity(launchIntent)
-        toast("نُسخ النص. الصقه في $appName ثم أرسل.")
-    }
-
-    private fun receiveReply(from: String) {
-        var text = BridgeAccessibilityService.getLastReply(from).trim()
-        if (text.isBlank()) {
-            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            text = if (clipboard.hasPrimaryClip()) clipboard.primaryClip?.getItemAt(0)?.coerceToText(this)?.toString()?.trim().orEmpty() else ""
-        }
-        if (text.isBlank()) {
-            if (!BridgeAccessibilityService.isEnabled(this)) showEnableAccessibilityDialog()
-            else toast("لم أجد ردًا حديثًا من $from. افتح المحادثة ثم حاول مرة أخرى، أو انسخ الرد يدويًا.")
-            return
-        }
-        latestReply = text
-        latestReplyFrom = from
-        addEntry("رد من $from", text)
-        binding.inputRequest.setText("راجع رد $from التالي، وحدد نقاط القوة والضعف، ثم اقترح تحسينًا واضحًا دون تكرار غير ضروري:\n\n$text")
-        toast("تم استلام رد $from.")
-    }
-
-    private fun showEnableAccessibilityDialog() {
-        AlertDialog.Builder(this)
-            .setTitle("تفعيل خدمة إمكانية الوصول")
-            .setMessage("هذه الخدمة اختيارية وتقرأ النص الظاهر من التطبيقات المدعومة فقط؛ لا تمنح وصولًا غير محدود إلى بيانات التطبيقات الخاصة. هل تريد فتح إعدادات النظام؟")
-            .setPositiveButton("فتح الإعدادات") { _, _ -> startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
-            .setNegativeButton("لاحقاً", null)
-            .show()
-    }
-
-    private fun copyToClipboard(text: String) {
-        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        clipboard.setPrimaryClip(ClipData.newPlainText("NEO-LOCAL", text))
-    }
-
-    private fun addEntry(title: String, text: String) {
-        history.append("━━━━━━━━━━━━━━━━━━━━\n【 $title 】\n${text.trim()}\n\n")
-        binding.outputResponse.text = history.toString()
-        binding.scrollConversation.post { binding.scrollConversation.fullScroll(android.view.View.FOCUS_DOWN) }
+    private fun log(title: String, detail: String) {
+        runOnUiThread { binding.outputResponse.text = "【$title】\n$detail\n\n" + binding.outputResponse.text }
     }
 
     private fun toast(message: String) = Toast.makeText(this, message, Toast.LENGTH_LONG).show()
 
-    companion object {
-        private const val CHATGPT_PACKAGE = "com.openai.chatgpt"
-        private const val GROK_PACKAGE = "ai.x.grok"
-        private const val BRIDGE_BASE_URL = "http://127.0.0.1:8766"
-    }
+    companion object { private const val BRIDGE_BASE_URL = "http://127.0.0.1:8766" }
 }
