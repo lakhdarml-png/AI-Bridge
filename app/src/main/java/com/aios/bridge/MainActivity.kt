@@ -1,37 +1,73 @@
 package com.aios.bridge
 
-import android.content.Context
-import com.chaquo.python.Python
-import com.chaquo.python.android.AndroidPlatform
+import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
+import com.aios.bridge.databinding.ActivityMainBinding
 import org.json.JSONObject
+import java.util.concurrent.Executors
 
-/**
- * Small allowlisted bridge into the embedded Python core. All calls are made by
- * MainActivity's worker executor, never on the UI thread.
- */
-object CoreFacade {
-    @Volatile private var initialized = false
-    @Volatile private var module: com.chaquo.python.PyObject? = null
+class MainActivity : AppCompatActivity() {
+    private lateinit var binding: ActivityMainBinding
+    private val worker = Executors.newSingleThreadExecutor()
 
-    @Synchronized
-    private fun module(context: Context): com.chaquo.python.PyObject {
-        if (!Python.isStarted()) Python.start(AndroidPlatform(context.applicationContext))
-        val py = Python.getInstance()
-        if (!initialized) {
-            // Must happen before importing core: its APP_HOME/DB_PATH are set at import time.
-            py.getModule("os").get("environ").callAttr(
-                "__setitem__", "NEO_LOCAL_HOME", context.applicationContext.filesDir.resolve("neo_local").absolutePath
-            )
-            module = py.getModule("neo_local.android_facade")
-            initialized = true
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        binding.btnCheckCore.setOnClickListener {
+            runCoreAction("جارٍ تهيئة Python وفحص النواة…") { CoreFacade.status(this) }
         }
-        return module ?: error("Python facade did not initialize")
+        binding.btnAddTask.setOnClickListener {
+            val goal = binding.taskInput.text.toString().trim()
+            if (goal.isEmpty()) {
+                binding.taskInput.error = "اكتب هدف المهمة أولاً"
+            } else {
+                runCoreAction("جارٍ حفظ المهمة…") { CoreFacade.addTask(this, goal) }
+            }
+        }
+        binding.btnRemember.setOnClickListener {
+            val title = binding.memoryTitle.text.toString().trim()
+            val content = binding.memoryContent.text.toString().trim()
+            if (title.isEmpty()) binding.memoryTitle.error = "العنوان مطلوب"
+            else if (content.isEmpty()) binding.memoryContent.error = "المحتوى مطلوب"
+            else runCoreAction("جارٍ حفظ الذاكرة…") { CoreFacade.remember(this, title, content) }
+        }
+        binding.btnRecall.setOnClickListener {
+            runCoreAction("جارٍ قراءة البيانات المحلية…") { CoreFacade.listData(this) }
+        }
+        binding.outputResponse.text = "النواة المدمجة جاهزة للفحص. لا حاجة لتشغيل خادم أو تطبيق طرفية."
     }
 
-    fun status(context: Context): String = module(context).callAttr("status_json").toString()
-    fun addTask(context: Context, goal: String): String =
-        module(context).callAttr("add_task_json", goal).toString()
-    fun remember(context: Context, title: String, content: String): String =
-        module(context).callAttr("remember_json", title, content).toString()
-    fun listData(context: Context): String = module(context).callAttr("list_data_json").toString()
+    private fun runCoreAction(working: String, operation: () -> String) {
+        setBusy(true)
+        binding.coreConnectionStatus.text = working
+        worker.execute {
+            val result = try { operation() } catch (e: Exception) {
+                JSONObject().put("ok", false)
+                    .put("error", e.message ?: e.javaClass.simpleName).toString()
+            }
+            runOnUiThread {
+                val json = try { JSONObject(result) } catch (_: Exception) {
+                    JSONObject().put("ok", false).put("error", result)
+                }
+                val ok = json.optBoolean("ok", false)
+                binding.coreConnectionStatus.text = if (ok) "النواة المدمجة تعمل ✓" else "تعذّر تشغيل النواة"
+                binding.outputResponse.text = json.toString(2)
+                setBusy(false)
+            }
+        }
+    }
+
+    private fun setBusy(busy: Boolean) {
+        binding.btnCheckCore.isEnabled = !busy
+        binding.btnAddTask.isEnabled = !busy
+        binding.btnRemember.isEnabled = !busy
+        binding.btnRecall.isEnabled = !busy
+    }
+
+    override fun onDestroy() {
+        worker.shutdown()
+        super.onDestroy()
+    }
 }
