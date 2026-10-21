@@ -11,6 +11,7 @@ on:
       - '*.gradle.kts'
       - 'gradle.properties'
       - 'core.py'
+      - 'neo_local/**'
       - 'termux_bridge.py'
       - 'tests/**'
       - '.github/workflows/build-apk.yml'
