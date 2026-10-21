@@ -8,7 +8,10 @@ from pathlib import Path
 
 def _core():
     # Android sets this before the first import; keep a safe default for host tests.
-    from . import core
+    try:
+        from . import core  # Host-side package import.
+    except ImportError:
+        import core  # Chaquopy loads this directory as the Python source root.
     core.init_db()
     return core
 
