@@ -16,8 +16,8 @@ Acceptance gate: one task can be created, planned, executed through the approved
 ## Phase 2 — Independent Android app and core connection (25%)
 Scope:
 - [ ] Evolve the existing Android app incrementally; preserve useful UI and resources.
-- [ ] Define a documented, versioned local communication contract between Android and core.
-- [ ] Show core connection/health, current project, task state, and useful error messages.
+- [x] Add a first fixed-action local request/response path for core status; versioned protocol and broader task APIs remain open.
+- [ ] Verify the new core connection/status UI on a physical phone; expand later to current project, task state, and actionable errors.
 - [ ] Provide task submission, plan review, explicit approval prompts, progress, and results.
 - [ ] Keep Android sandbox and user-granted permission boundaries explicit.
 - [ ] Handle unavailable Termux/core and denied permissions without crashes or misleading success.
@@ -69,4 +69,4 @@ Acceptance gate: the app can be installed and recovered on the target phone, loc
 - Report blockers honestly and prioritize the next action by user impact and risk.
 
 ## Current status at this revision
-The GitHub integration branch contains the Python core/tooling, tests, documentation, and an Android shell. This confirms that source files exist in that branch only. The independent Android-to-core workflow, the five-layer self-development interface, and end-to-end fault-repair workflow remain planned until their acceptance gates are evidenced. The local Termux branch previously reported by the user is not currently listed as a remote GitHub branch, so its newest commits cannot be verified from GitHub yet.
+The GitHub working branch contains the Python core/tooling, tests, documentation, and an Android shell. A first source-level Android-to-Termux core-status request and fixed read-only bridge action are now implemented on `neo-local-v1-five-layer-blueprint`; they are not yet build- or device-verified. The task/plan workflow in Android, five-layer self-development interface, and end-to-end fault-repair workflow remain planned until their acceptance gates are evidenced. The local Termux branch previously reported by the user is not currently listed as a remote GitHub branch, so its newest commits cannot be verified from GitHub yet.
