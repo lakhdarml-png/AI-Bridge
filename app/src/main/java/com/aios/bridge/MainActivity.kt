@@ -55,6 +55,8 @@ class MainActivity : AppCompatActivity() {
                 binding.coreConnectionStatus.text = if (ok) "النواة المدمجة تعمل ✓" else "تعذّر تشغيل النواة"
                 binding.outputResponse.text = json.toString(2)
                 setBusy(false)
+                // Bring the result panel into view; it sits below the form on small screens.
+                binding.rootScroll.post { binding.rootScroll.smoothScrollTo(0, binding.outputResponse.bottom) }
             }
         }
     }
