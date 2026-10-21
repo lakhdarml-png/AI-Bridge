@@ -209,7 +209,8 @@ class MainActivity : AppCompatActivity() {
         binding.btnCheckCore.isEnabled = !busy
         binding.btnAddTask.isEnabled = !busy
         binding.btnRemember.isEnabled = !busy
-        binding.btnRecall.isEnabled = !busy\n        binding.btnAskChatGpt.isEnabled = !busy\n        binding.btnAskGrok.isEnabled = !busy\n        binding.btnAskBoth.isEnabled = !busy\n        binding.btnSaveProviderKeys.isEnabled = !busy
+        binding.btnRecall.isEnabled = !busy
+        binding.btnAskChatGpt.isEnabled = !busy\n        binding.btnAskGrok.isEnabled = !busy\n        binding.btnAskBoth.isEnabled = !busy\n        binding.btnSaveProviderKeys.isEnabled = !busy
     }
 
     override fun onDestroy() {
