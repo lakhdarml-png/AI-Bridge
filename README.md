@@ -12,12 +12,13 @@ NEO-LOCAL is intended to inspect project files, diagnose issues, plan work, exec
 - [Five-phase delivery roadmap](docs/NEO_LOCAL_ROADMAP.md)
 - [Five-layer implementation blueprint](docs/NEO_LOCAL_FIVE_LAYER_BLUEPRINT.md)
 - [Reference-project review](docs/REFERENCE_PROJECTS.md)
+- [Chaquopy embedded-core migration plan](docs/CHAQUOPY_MIGRATION_PLAN.md)
 
 ## Current implementation
 - Python core, planning/task modules, allowlisted tools, bridge, and tests.
-- Android NEO-LOCAL control panel with **Start bridge**, **Stop bridge**, and **Check connection**.
+- Current Android control panel still uses the Termux bridge; the approved next architecture is documented in the [Chaquopy migration plan](docs/CHAQUOPY_MIGRATION_PLAN.md).
 - Starting and stopping requires confirmation in the Android app.
-- The bridge binds only to `127.0.0.1:8766`; it does not accept arbitrary shell commands.
+- The current bridge binds only to `127.0.0.1:8766` and does not accept arbitrary shell commands; it remains in place for rollback until the embedded core is verified.
 - The legacy copy/paste ChatGPT/Grok screen and its accessibility service have been removed from the Android app.
 - GitHub Actions builds the debug APK and runs the Python test suite. A successful CI build does not replace physical-device verification.
 
