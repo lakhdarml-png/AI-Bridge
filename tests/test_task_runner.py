@@ -99,5 +99,27 @@ class TaskRunnerTests(unittest.TestCase):
             task_runner.recover_stale_tasks(0)
 
 
+    def test_sensitive_task_requires_explicit_runtime_approval(self):
+        contract = tool_lab.TOOL_REGISTRY["word_count"]
+        previous = contract["approval_required"]
+        contract["approval_required"] = True
+        try:
+            self.make_approved_tool()
+            task_id = core.add_task("Sensitive task")
+
+            with self.assertRaisesRegex(ValueError, "explicit runtime approval"):
+                task_runner.execute_task(task_id, "count_demo", "hello world")
+
+            self.assertEqual(self.task_status(task_id)["status"], "queued")
+
+            result = task_runner.execute_task(
+                task_id, "count_demo", "hello world", runtime_approved=True
+            )
+            self.assertEqual(result["words"], 2)
+            self.assertEqual(self.task_status(task_id)["status"], "completed")
+        finally:
+            contract["approval_required"] = previous
+
+
 if __name__ == "__main__":
     unittest.main()

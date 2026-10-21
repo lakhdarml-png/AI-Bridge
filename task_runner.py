@@ -61,7 +61,10 @@ def recover_stale_tasks(older_than_minutes: int = 60) -> int:
     return count
 
 
-def execute_task(task_id: int, tool_name: str, input_text: str) -> Any:
+def execute_task(
+    task_id: int, tool_name: str, input_text: str, *,
+    runtime_approved: bool = False,
+) -> Any:
     if task_id < 1:
         raise ValueError("task ID must be positive")
     with core.connect() as db:
@@ -70,13 +73,28 @@ def execute_task(task_id: int, tool_name: str, input_text: str) -> Any:
             raise ValueError("task does not exist")
         if task["status"] != "queued":
             raise ValueError(f"task must be queued; current status is {task['status']}")
-        # Leave the task result intact until the runner owns the transition.
+        # Require explicit approval before claiming a sensitive queued task.
+    try:
+        needs_approval = tool_lab.runtime_approval_required(tool_name)
+    except ValueError:
+        needs_approval = False
+
+    if needs_approval and not runtime_approved:
+        tool_lab.audit(
+            "approval_denied", tool_name,
+            f"task:{task_id}:runtime_approval_required",
+        )
+        raise ValueError("this task requires explicit runtime approval")
+
+    # Leave the task result intact until the runner owns the transition.
     task_manager.transition_status(
         task_id, "running", expected_status="queued", actor="task_runner",
         details=f"tool={tool_name}", result=None, execution_transition=True,
     )
     try:
-        result = tool_lab.run_approved(tool_name, input_text)
+        result = tool_lab.run_approved(
+            tool_name, input_text, runtime_approved=runtime_approved
+        )
         result_text = json.dumps(result, ensure_ascii=False)
     except Exception as exc:
         try:
@@ -111,6 +129,10 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("task_id", type=int)
     run.add_argument("tool_name")
     run.add_argument("input_text")
+    run.add_argument(
+        "--approve-sensitive", action="store_true",
+        help="explicitly approve a sensitive tool for this task",
+    )
     recover = sub.add_parser("recover", help="mark old interrupted running tasks as failed; never resumes them")
     recover.add_argument("--older-than-minutes", type=int, default=60)
     args = parser.parse_args(argv)
@@ -119,7 +141,10 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "list":
             list_tasks()
         elif args.command == "run":
-            result = execute_task(args.task_id, args.tool_name, args.input_text)
+            result = execute_task(
+                args.task_id, args.tool_name, args.input_text,
+                runtime_approved=args.approve_sensitive,
+            )
             print(json.dumps(result, ensure_ascii=False))
         elif args.command == "recover":
             count = recover_stale_tasks(args.older_than_minutes)

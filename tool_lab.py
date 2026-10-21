@@ -21,6 +21,29 @@ AUDIT = STATE / "audit.jsonl"
 NAME_RE = re.compile(r"^[a-z][a-z0-9_]{0,39}$")
 OPERATIONS = {"word_count", "uppercase", "prefix"}
 
+# Explicit contracts: only these built-in handlers may execute.
+TOOL_REGISTRY = {
+    "word_count": {
+        "input_type": "string", "max_input": 4000,
+        "output_type": "object", "max_output": 12000,
+        "side_effect": "none", "approval_required": False,
+        "options": set(),
+    },
+    "uppercase": {
+        "input_type": "string", "max_input": 4000,
+        "output_type": "string", "max_output": 12000,
+        "side_effect": "none", "approval_required": False,
+        "options": set(),
+    },
+    "prefix": {
+        "input_type": "string", "max_input": 4000,
+        "output_type": "string", "max_output": 12000,
+        "side_effect": "none", "approval_required": False,
+        "options": {"limit"},
+    },
+}
+
+
 
 def stamp() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -47,17 +70,45 @@ def audit(action: str, name: str, detail: str = "") -> None:
 
 
 def apply_operation(operation: str, text: str, options: dict[str, Any] | None = None) -> Any:
-    options = options or {}
+    contract = TOOL_REGISTRY.get(operation)
+    if contract is None:
+        raise ValueError("operation is not in the built-in allowlist")
+    if not isinstance(text, str) or len(text) > contract["max_input"]:
+        raise ValueError("input must be text within the registered size limit")
+    if options is None:
+        options = {}
+    if not isinstance(options, dict):
+        raise ValueError("options must be an object")
+    if set(options) - contract["options"]:
+        raise ValueError("unsupported option for this operation")
+
     if operation == "word_count":
-        return {"characters": len(text), "words": len(re.findall(r"\b\w+\b", text, flags=re.UNICODE)), "lines": len(text.splitlines()) if text else 0}
-    if operation == "uppercase":
-        return text.upper()
-    if operation == "prefix":
+        result = {
+            "characters": len(text),
+            "words": len(re.findall(r"\b\w+\b", text, flags=re.UNICODE)),
+            "lines": len(text.splitlines()) if text else 0,
+        }
+    elif operation == "uppercase":
+        result = text.upper()
+    elif operation == "prefix":
         limit = options.get("limit", 20)
         if not isinstance(limit, int) or isinstance(limit, bool) or not 1 <= limit <= 500:
             raise ValueError("prefix limit must be an integer from 1 to 500")
-        return text[:limit]
-    raise ValueError("operation is not in the built-in allowlist")
+        result = text[:limit]
+    else:
+        raise ValueError("operation is not in the built-in allowlist")
+
+    if contract["output_type"] == "object" and not isinstance(result, dict):
+        raise ValueError("tool output violates its registered contract")
+    if contract["output_type"] == "string" and not isinstance(result, str):
+        raise ValueError("tool output violates its registered contract")
+    try:
+        output_size = len(json.dumps(result, ensure_ascii=False).encode("utf-8"))
+    except (TypeError, ValueError) as exc:
+        raise ValueError("tool output is not JSON-serializable") from exc
+    if output_size > contract["max_output"]:
+        raise ValueError("tool output exceeds its registered size limit")
+    return result
 
 
 def validate(manifest: dict[str, Any]) -> None:
@@ -168,10 +219,33 @@ def active_manifest(name: str) -> tuple[dict[str, Any], Path]:
     return manifest, version_path
 
 
-def run_approved(name: str, text: str) -> Any:
+def runtime_approval_required(name: str) -> bool:
+    manifest, path = active_manifest(name)
+    contract = TOOL_REGISTRY.get(manifest.get("operation"))
+    if contract is None:
+        audit("deny", name, f"{path.name}:operation_not_allowed")
+        raise ValueError("operation is not in the built-in allowlist")
+    return bool(contract["approval_required"] or contract["side_effect"] != "none")
+
+
+def run_approved(
+    name: str, text: str, *, runtime_approved: bool = False
+) -> Any:
     if not isinstance(text, str) or len(text) > 4000:
         raise ValueError("input must be text of at most 4000 characters")
     manifest, path = active_manifest(name)
+    contract = TOOL_REGISTRY.get(manifest.get("operation"))
+    if contract is None:
+        audit("deny", name, f"{path.name}:operation_not_allowed")
+        raise ValueError("operation is not in the built-in allowlist")
+    needs_approval = (
+        contract["approval_required"] or contract["side_effect"] != "none"
+    )
+    if needs_approval and not runtime_approved:
+        audit("approval_denied", name, f"{path.name}:runtime_approval_required")
+        raise ValueError("this operation requires explicit runtime approval")
+    if needs_approval:
+        audit("approval_granted", name, f"{path.name}:runtime")
     try:
         result = apply_operation(manifest["operation"], text, manifest.get("options"))
     except Exception:
