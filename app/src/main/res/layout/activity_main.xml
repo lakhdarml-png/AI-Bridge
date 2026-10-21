@@ -24,7 +24,7 @@
   <EditText android:id="@+id/taskInput" android:layout_width="match_parent"
    android:layout_height="wrap_content" android:hint="اكتب هدف المهمة"
    android:inputType="textMultiLine" android:minLines="2" android:textColor="#FFFFFF"
-   android:hintTextColor="#999999" android:backgroundTint="@color/gold"
+   android:textColorHint="#999999" android:backgroundTint="@color/gold"
    android:layout_marginBottom="6dp"/>
   <Button android:id="@+id/btnAddTask" android:layout_width="match_parent"
    android:layout_height="wrap_content" android:text="حفظ المهمة"
@@ -35,12 +35,12 @@
    android:textSize="16sp" android:layout_marginBottom="6dp"/>
   <EditText android:id="@+id/memoryTitle" android:layout_width="match_parent"
    android:layout_height="wrap_content" android:hint="عنوان الذاكرة"
-   android:singleLine="true" android:textColor="#FFFFFF" android:hintTextColor="#999999"
+   android:singleLine="true" android:textColor="#FFFFFF" android:textColorHint="#999999"
    android:backgroundTint="@color/gold" android:layout_marginBottom="6dp"/>
   <EditText android:id="@+id/memoryContent" android:layout_width="match_parent"
    android:layout_height="wrap_content" android:hint="محتوى الذاكرة"
    android:inputType="textMultiLine" android:minLines="2" android:textColor="#FFFFFF"
-   android:hintTextColor="#999999" android:backgroundTint="@color/gold"
+   android:textColorHint="#999999" android:backgroundTint="@color/gold"
    android:layout_marginBottom="6dp"/>
   <Button android:id="@+id/btnRemember" android:layout_width="match_parent"
    android:layout_height="wrap_content" android:text="حفظ الذاكرة"
