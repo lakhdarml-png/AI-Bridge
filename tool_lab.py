@@ -19,7 +19,7 @@ CANDIDATES = STATE / "candidates"
 APPROVED = STATE / "approved"
 AUDIT = STATE / "audit.jsonl"
 NAME_RE = re.compile(r"^[a-z][a-z0-9_]{0,39}$")
-OPERATIONS = {"word_count", "uppercase", "prefix"}
+OPERATIONS = {"word_count", "uppercase", "prefix", "file_search"}
 
 # Explicit contracts: only these built-in handlers may execute.
 TOOL_REGISTRY = {
@@ -40,6 +40,12 @@ TOOL_REGISTRY = {
         "output_type": "string", "max_output": 12000,
         "side_effect": "none", "approval_required": False,
         "options": {"limit"},
+    },
+    "file_search": {
+        "input_type": "string", "max_input": 4000,
+        "output_type": "object", "max_output": 12000,
+        "side_effect": "read", "approval_required": True,
+        "options": set(),
     },
 }
 
@@ -69,7 +75,7 @@ def audit(action: str, name: str, detail: str = "") -> None:
         stream.write(json.dumps({"time": stamp(), "action": action, "name": name, "detail": detail}, ensure_ascii=False) + "\n")
 
 
-def apply_operation(operation: str, text: str, options: dict[str, Any] | None = None) -> Any:
+def apply_operation(operation: str, text: str, options: dict[str, Any] | None = None, *, runtime_approved: bool = False, validate_only: bool = False) -> Any:
     contract = TOOL_REGISTRY.get(operation)
     if contract is None:
         raise ValueError("operation is not in the built-in allowlist")
@@ -95,6 +101,43 @@ def apply_operation(operation: str, text: str, options: dict[str, Any] | None = 
         if not isinstance(limit, int) or isinstance(limit, bool) or not 1 <= limit <= 500:
             raise ValueError("prefix limit must be an integer from 1 to 500")
         result = text[:limit]
+    elif operation == "file_search":
+        try:
+            request = json.loads(text)
+        except json.JSONDecodeError as exc:
+            raise ValueError('input must be JSON with "path" and "query"') from exc
+        if not isinstance(request, dict):
+            raise ValueError("file search input must be an object")
+        file_path, query = request.get("path"), request.get("query")
+        if not isinstance(file_path, str) or not file_path.strip():
+            raise ValueError("path must be a non-empty string")
+        if not isinstance(query, str) or not query:
+            raise ValueError("query must be a non-empty string")
+        if validate_only:
+            return {"path": file_path, "query": query, "total_matches": 0, "matches": [], "truncated": False}
+        if not runtime_approved:
+            raise ValueError("file search requires explicit runtime approval")
+        target = Path(file_path).expanduser()
+        if not target.is_file():
+            raise ValueError("path is not a readable regular file")
+        if target.stat().st_size > 1_048_576:
+            raise ValueError("file exceeds the 1 MiB read limit")
+        try:
+            content = target.read_text(encoding="utf-8")
+        except (OSError, UnicodeError) as exc:
+            raise ValueError("file could not be read as UTF-8 text") from exc
+        matches = [
+            {"line": number, "text": line[:300]}
+            for number, line in enumerate(content.splitlines(), 1)
+            if query.casefold() in line.casefold()
+        ]
+        result = {
+            "path": str(target),
+            "query": query,
+            "total_matches": len(matches),
+            "matches": matches[:30],
+            "truncated": len(matches) > 30,
+        }
     else:
         raise ValueError("operation is not in the built-in allowlist")
 
@@ -127,7 +170,7 @@ def validate(manifest: dict[str, Any]) -> None:
     options = manifest.get("options", {})
     if not isinstance(options, dict):
         raise ValueError("options must be an object")
-    apply_operation(manifest["operation"], manifest["sample_input"], options)
+    apply_operation(manifest["operation"], manifest["sample_input"], options, validate_only=True)
 
 
 def candidate_path(name: str) -> Path:
@@ -151,7 +194,7 @@ def create(name: str, operation: str, sample: str, limit: int) -> Path:
     if not isinstance(sample, str) or len(sample) > 4000:
         raise ValueError("sample must be text of at most 4000 characters")
     options = {"limit": limit} if operation == "prefix" else {}
-    expected = apply_operation(operation, sample, options)
+    expected = apply_operation(operation, sample, options, validate_only=(operation == "file_search"))
     manifest = {
         "schema_version": 1, "name": name, "version": 1, "operation": operation,
         "options": options, "sample_input": sample, "expected": expected,
@@ -169,7 +212,7 @@ def create(name: str, operation: str, sample: str, limit: int) -> Path:
 def test_candidate(name: str) -> bool:
     path = candidate_path(name)
     manifest = load_manifest(path)
-    actual = apply_operation(manifest["operation"], manifest["sample_input"], manifest.get("options"))
+    actual = apply_operation(manifest["operation"], manifest["sample_input"], manifest.get("options"), validate_only=(manifest["operation"] == "file_search"))
     passed = actual == manifest.get("expected")
     audit("test", name, "passed" if passed else "failed")
     print(f"Candidate: {name}")
@@ -247,7 +290,7 @@ def run_approved(
     if needs_approval:
         audit("approval_granted", name, f"{path.name}:runtime")
     try:
-        result = apply_operation(manifest["operation"], text, manifest.get("options"))
+        result = apply_operation(manifest["operation"], text, manifest.get("options"), runtime_approved=runtime_approved)
     except Exception:
         audit("run", name, f"{path.name}:failed")
         raise
