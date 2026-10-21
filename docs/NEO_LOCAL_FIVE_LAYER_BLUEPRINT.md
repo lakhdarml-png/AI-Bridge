@@ -1,6 +1,6 @@
 # NEO-LOCAL — Five-Layer Blueprint
 
-**Status:** architecture skeleton / implementation inventory, not a completion claim.  
+**Status:** architecture skeleton plus first source-level Android-to-Termux status connection; not yet built or verified on a physical phone.  
 **Base reviewed:** `neo-local-v1-integration`, commit `1dbed0675854c17cdb85e7adc4fff3ecd0ff75a4`.  
 **Blueprint branch:** `neo-local-v1-five-layer-blueprint`.
 
@@ -12,7 +12,7 @@ A personal, independent Android agent that helps the user inspect, reason about,
 | Layer | Weight | Existing source | Target boundary | Status from repository inspection |
 |---|---:|---|---|---|
 | 1. Core foundation | 15% | `core.py`, `task_manager.py`, `task_runner.py`, `plan_manager.py`, `plan_runner.py`, `workflow_engine.py`, `memory_manager.py` | Persistent state, memory, task/plan lifecycle, audit, recovery | Source exists; full canonical end-to-end lifecycle not yet established by this review |
-| 2. Android app + core connection | 25% | `app/`, `MainActivity.kt`, `BridgeAccessibilityService.kt`, manifest/resources | Native workspace, connection status, task/plan views, approvals, results | Android shell exists; its inspected screen currently focuses on app-to-app text handoff, not a verified core workflow |
+| 2. Android app + core connection | 25% | `app/`, `MainActivity.kt`, `BridgeAccessibilityService.kt`, manifest/resources | Native workspace, connection status, task/plan views, approvals, results | Source-level core-status button and fixed bridge action added on this branch; build and on-device connection are not yet verified |
 | 3. Access, execution, diagnostics | 25% | `tool_lab.py`, `termux_bridge.py`, task/plan runners, `tests/` | Allowlisted inspection, build/test execution, diagnosis, verification, recovery | Several local tools and tests exist; bridge currently exposes only a small fixed action allowlist |
 | 4. Self-development/extensions | 20% | No dedicated implementation identified in this branch | “التطوير الذاتي” screen, layer/tool inventory, capability proposals, reviewed activation and rollback | Planned; no dedicated UI/module identified |
 | 5. Integrations/stability | 15% | Existing Android app declarations, Termux bridge, docs and tests | Optional providers/connectors, GitHub, backups, restore, privacy and release checks | Partial building blocks exist; full integration/recovery/release gates are not verified |
@@ -56,7 +56,7 @@ Do not duplicate existing Python modules into these directories just to match th
 
 ## Immediate implementation order
 1. Complete the core inventory from source and define the single canonical workflow contract.
-2. Adapt the existing Android shell to show actual core connection/status; do not discard its current resources.
+2. Build and verify the new Android core-status button against the local bridge; repair any build or network-policy issue before adding more features.
 3. Connect one safe read-only operation through the bridge and show its real response in Android.
 4. Add a separate approval path for one bounded mutation only after read-only integration works.
 5. Build the self-development screen from real registry/status data, not hard-coded claims.
