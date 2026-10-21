@@ -22,7 +22,7 @@ object CoreFacade {
             py.getModule("os").get("environ").callAttr(
                 "__setitem__", "NEO_LOCAL_HOME", context.applicationContext.filesDir.resolve("neo_local").absolutePath
             )
-            module = py.getModule("neo_local.android_facade")
+            module = py.getModule("android_facade")
             initialized = true
         }
         return module ?: error("Python facade did not initialize")
