@@ -34,8 +34,9 @@ chaquopy {
     }
     sourceSets {
         getByName("main") {
-            // Keep the existing Python core as the single source of truth.
+            // Only package sources, not the repository root/build outputs.
             srcDir("../")
+            include("neo_local/**")
         }
     }
 }
