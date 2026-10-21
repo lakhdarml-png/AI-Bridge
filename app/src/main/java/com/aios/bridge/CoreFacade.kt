@@ -3,7 +3,6 @@ package com.aios.bridge
 import android.content.Context
 import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
-import org.json.JSONObject
 
 /**
  * Small allowlisted bridge into the embedded Python core. All calls are made by
@@ -23,6 +22,7 @@ object CoreFacade {
                 "__setitem__", "NEO_LOCAL_HOME", context.applicationContext.filesDir.resolve("neo_local").absolutePath
             )
             module = py.getModule("android_facade")
+                ?: error("Python module android_facade could not be loaded")
             initialized = true
         }
         return module ?: error("Python facade did not initialize")
