@@ -4,33 +4,48 @@
     android:layout_height="match_parent"
     android:background="#121212"
     android:fillViewport="true">
-
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="16dp"
         android:layoutDirection="rtl">
-
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="AI Bridge | الجسر الذكي"
+            android:text="NEO-LOCAL | الوكيل المحلي"
             android:textColor="@color/gold"
             android:textSize="24sp"
             android:textStyle="bold"
             android:gravity="center"
             android:layout_marginBottom="6dp" />
-
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="انسخ الرد من المساعد، استلمه هنا، ثم انقله للمساعد الآخر. كل رد يظهر باسمه بوضوح."
+            android:text="مساحة عمل محلية شخصية. الاتصال بالنواة اختياري ويعمل عبر جسر Termux المحلي."
             android:textColor="#CCCCCC"
             android:textSize="14sp"
             android:lineSpacingExtra="3dp"
             android:layout_marginBottom="12dp" />
-
+        <TextView
+            android:id="@+id/coreConnectionStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="لم يتم فحص اتصال النواة بعد."
+            android:textColor="#E5A93C"
+            android:textSize="14sp"
+            android:padding="10dp"
+            android:background="#1E1E1E"
+            android:layout_marginBottom="6dp" />
+        <Button
+            android:id="@+id/btnCheckCore"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="فحص اتصال النواة المحلية"
+            android:textAllCaps="false"
+            android:backgroundTint="@color/gold"
+            android:textColor="#121212"
+            android:layout_marginBottom="12dp" />
         <ScrollView
             android:id="@+id/scrollConversation"
             android:layout_width="match_parent"
@@ -38,7 +53,6 @@
             android:fillViewport="true"
             android:background="#1E1E1E"
             android:layout_marginBottom="12dp">
-
             <TextView
                 android:id="@+id/outputResponse"
                 android:layout_width="match_parent"
@@ -49,12 +63,11 @@
                 android:padding="12dp"
                 android:textIsSelectable="true" />
         </ScrollView>
-
         <EditText
             android:id="@+id/inputRequest"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="اكتب الرسالة أو تعليمات مراجعة الرد..."
+            android:hint="اكتب رسالة أو تعليمات مراجعة الرد..."
             android:textColor="#FFFFFF"
             android:textColorHint="#888888"
             android:backgroundTint="@color/gold"
@@ -67,8 +80,6 @@
             android:inputType="textMultiLine|textCapSentences|textNoSuggestions"
             android:scrollbars="vertical"
             android:layout_marginBottom="12dp" />
-
-        <!-- مجموعة ChatGPT -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -77,7 +88,6 @@
             android:textSize="13sp"
             android:textStyle="bold"
             android:layout_marginBottom="4dp" />
-
         <Button
             android:id="@+id/btnSendChatgpt"
             android:layout_width="match_parent"
@@ -86,7 +96,6 @@
             android:textAllCaps="false"
             android:backgroundTint="@color/chatgpt_blue"
             android:textColor="#FFFFFF" />
-
         <Button
             android:id="@+id/btnCaptureChatgpt"
             android:layout_width="match_parent"
@@ -96,8 +105,6 @@
             android:backgroundTint="#1A3A5C"
             android:textColor="#FFFFFF"
             android:layout_marginBottom="12dp" />
-
-        <!-- مجموعة Grok -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -106,7 +113,6 @@
             android:textSize="13sp"
             android:textStyle="bold"
             android:layout_marginBottom="4dp" />
-
         <Button
             android:id="@+id/btnSendGrok"
             android:layout_width="match_parent"
@@ -115,7 +121,6 @@
             android:textAllCaps="false"
             android:backgroundTint="@color/grok_purple"
             android:textColor="#FFFFFF" />
-
         <Button
             android:id="@+id/btnCaptureGrok"
             android:layout_width="match_parent"
@@ -124,11 +129,10 @@
             android:textAllCaps="false"
             android:backgroundTint="#3A1A5C"
             android:textColor="#FFFFFF" />
-
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="مهم: النسخ واللصق والإرسال داخل التطبيقات يتم بواسطتك. لا يحتاج التطبيق إلى إذن إمكانية الوصول أو مفتاح API أو إنترنت."
+            android:text="الإجراءات الحساسة والتعديلات ستحتاج موافقتك الصريحة. خدمة إمكانية الوصول اختيارية."
             android:textColor="#999999"
             android:textSize="12sp"
             android:layout_marginTop="14dp" />
