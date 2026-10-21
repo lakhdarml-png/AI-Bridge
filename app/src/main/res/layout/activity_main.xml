@@ -10,6 +10,56 @@
   <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
    android:text="النواة المحلية المدمجة" android:textColor="#FFFFFF" android:textSize="18sp"
    android:gravity="center" android:layout_marginBottom="18dp"/>
+
+  <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+   android:text="الغرفة المشتركة — ChatGPT + Grok" android:textColor="@color/gold"
+   android:textStyle="bold" android:textSize="19sp" android:layout_marginTop="10dp"
+   android:layout_marginBottom="8dp"/>
+  <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+   android:text="اتصال مباشر بواجهات النماذج عبر API. أدخل مفاتيحك بنفسك؛ تُحفظ مشفّرة على الهاتف. MCP للأدوات المحلية سيكون طبقة منفصلة."
+   android:textColor="#BBBBBB" android:textSize="12sp" android:lineSpacingExtra="3dp"
+   android:layout_marginBottom="8dp"/>
+  <EditText android:id="@+id/openAiKeyInput" android:layout_width="match_parent"
+   android:layout_height="wrap_content" android:hint="مفتاح OpenAI API"
+   android:inputType="textPassword" android:singleLine="true" android:textColor="#FFFFFF"
+   android:textColorHint="#999999" android:backgroundTint="@color/gold"
+   android:importantForAutofill="no" android:layout_marginBottom="6dp"/>
+  <EditText android:id="@+id/xAiKeyInput" android:layout_width="match_parent"
+   android:layout_height="wrap_content" android:hint="مفتاح xAI API لـ Grok"
+   android:inputType="textPassword" android:singleLine="true" android:textColor="#FFFFFF"
+   android:textColorHint="#999999" android:backgroundTint="@color/gold"
+   android:importantForAutofill="no" android:layout_marginBottom="6dp"/>
+  <Button android:id="@+id/btnSaveProviderKeys" android:layout_width="match_parent"
+   android:layout_height="wrap_content" android:text="حفظ مفاتيح الاتصال بأمان"
+   android:textAllCaps="false" android:backgroundTint="#303030" android:textColor="#FFFFFF"
+   android:layout_marginBottom="10dp"/>
+  <EditText android:id="@+id/roomPromptInput" android:layout_width="match_parent"
+   android:layout_height="wrap_content" android:hint="اكتب رسالتك للغرفة المشتركة"
+   android:inputType="textMultiLine" android:minLines="2" android:textColor="#FFFFFF"
+   android:textColorHint="#999999" android:backgroundTint="@color/gold"
+   android:layout_marginBottom="6dp"/>
+  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+   android:orientation="horizontal" android:layout_marginBottom="8dp">
+   <Button android:id="@+id/btnAskChatGpt" android:layout_width="0dp"
+    android:layout_height="wrap_content" android:layout_weight="1" android:text="اسأل ChatGPT"
+    android:textAllCaps="false" android:backgroundTint="@color/gold" android:textColor="#121212"/>
+   <Button android:id="@+id/btnAskGrok" android:layout_width="0dp"
+    android:layout_height="wrap_content" android:layout_weight="1" android:text="اسأل Grok"
+    android:textAllCaps="false" android:backgroundTint="#303030" android:textColor="#FFFFFF"/>
+  </LinearLayout>
+  <Button android:id="@+id/btnAskBoth" android:layout_width="match_parent"
+   android:layout_height="wrap_content" android:text="أرسل إلى الاثنين واعرض الردين"
+   android:textAllCaps="false" android:backgroundTint="#294B3B" android:textColor="#FFFFFF"
+   android:layout_marginBottom="8dp"/>
+  <TextView android:id="@+id/roomStatus" android:layout_width="match_parent"
+   android:layout_height="wrap_content" android:text="الغرفة: لم يتم الاتصال بعد"
+   android:textColor="@color/gold" android:textSize="13sp" android:padding="8dp"
+   android:layout_marginBottom="6dp"/>
+  <TextView android:id="@+id/roomResponses" android:layout_width="match_parent"
+   android:layout_height="wrap_content" android:minHeight="80dp" android:textColor="#FFFFFF"
+   android:textSize="14sp" android:lineSpacingExtra="4dp" android:padding="12dp"
+   android:background="#1E1E1E" android:textIsSelectable="true"
+   android:layout_marginBottom="16dp"/>
   <TextView android:id="@+id/coreConnectionStatus" android:layout_width="match_parent"
    android:layout_height="wrap_content" android:text="حالة النواة: لم يتم الفحص"
    android:textColor="@color/gold" android:textSize="15sp" android:padding="14dp"

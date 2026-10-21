@@ -22,6 +22,22 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         binding.btnCheckCore.setOnClickListener { runCoreAction("جارٍ تهيئة Python وفحص النواة…") { CoreFacade.status(this) } }
+        binding.btnSaveProviderKeys.setOnClickListener {
+            try {
+                val openAi = binding.openAiKeyInput.text.toString().trim()
+                val xAi = binding.xAiKeyInput.text.toString().trim()
+                if (openAi.isNotEmpty()) ProviderSecrets.save(this, "openai", openAi)
+                if (xAi.isNotEmpty()) ProviderSecrets.save(this, "xai", xAi)
+                binding.openAiKeyInput.text?.clear()
+                binding.xAiKeyInput.text?.clear()
+                binding.roomStatus.text = "حُفظت المفاتيح المُدخلة مشفّرة على هذا الهاتف."
+            } catch (e: Exception) {
+                binding.roomStatus.text = "تعذّر حفظ المفاتيح: ${e.message ?: "خطأ غير معروف"}"
+            }
+        }
+        binding.btnAskChatGpt.setOnClickListener { askRoom("openai") }
+        binding.btnAskGrok.setOnClickListener { askRoom("xai") }
+        binding.btnAskBoth.setOnClickListener { askRoom("both") }
         binding.btnAddTask.setOnClickListener {
             val goal = binding.taskInput.text.toString().trim()
             if (goal.isEmpty()) binding.taskInput.error = "اكتب هدف المهمة أولاً"
@@ -36,6 +52,51 @@ class MainActivity : AppCompatActivity() {
         }
         binding.btnRecall.setOnClickListener { runCoreAction("جارٍ قراءة البيانات المحلية…") { CoreFacade.listData(this) } }
         binding.outputResponse.text = "النواة المدمجة جاهزة للفحص. لا حاجة لتشغيل خادم أو تطبيق طرفية."
+    }
+
+    private fun askRoom(target: String) {
+        val prompt = binding.roomPromptInput.text.toString().trim()
+        if (prompt.isEmpty()) {
+            binding.roomPromptInput.error = "اكتب رسالتك أولاً"
+            return
+        }
+        binding.btnAskChatGpt.isEnabled = false
+        binding.btnAskGrok.isEnabled = false
+        binding.btnAskBoth.isEnabled = false
+        binding.btnSaveProviderKeys.isEnabled = false
+        binding.roomStatus.text = "جارٍ إرسال الرسالة إلى ${if (target == "both") "ChatGPT وGrok" else if (target == "openai") "ChatGPT" else "Grok"}…"
+        binding.roomResponses.text = ""
+        worker.execute {
+            val results = mutableListOf<String>()
+            if (target == "openai" || target == "both") {
+                results += try {
+                    "━━ ChatGPT ━━\n" + ChatProviders.askOpenAI(
+                        ProviderSecrets.load(this, "openai"), prompt
+                    )
+                } catch (e: Exception) {
+                    "━━ ChatGPT ━━\nتعذّر الحصول على رد: ${e.message ?: e.javaClass.simpleName}"
+                }
+            }
+            if (target == "xai" || target == "both") {
+                results += try {
+                    "━━ Grok ━━\n" + ChatProviders.askGrok(
+                        ProviderSecrets.load(this, "xai"), prompt
+                    )
+                } catch (e: Exception) {
+                    "━━ Grok ━━\nتعذّر الحصول على رد: ${e.message ?: e.javaClass.simpleName}"
+                }
+            }
+            runOnUiThread {
+                binding.roomResponses.text = results.joinToString("\n\n")
+                binding.roomStatus.text = if (results.any { it.contains("تعذّر الحصول على رد") })
+                    "انتهى الطلب مع خطأ في اتصال واحد أو أكثر؛ راجع التفاصيل."
+                else "وصلت الردود من واجهات النماذج المتصلة."
+                binding.btnAskChatGpt.isEnabled = true
+                binding.btnAskGrok.isEnabled = true
+                binding.btnAskBoth.isEnabled = true
+                binding.btnSaveProviderKeys.isEnabled = true
+            }
+        }
     }
 
     private fun runCoreAction(working: String, operation: () -> String) {
@@ -148,7 +209,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnCheckCore.isEnabled = !busy
         binding.btnAddTask.isEnabled = !busy
         binding.btnRemember.isEnabled = !busy
-        binding.btnRecall.isEnabled = !busy
+        binding.btnRecall.isEnabled = !busy\n        binding.btnAskChatGpt.isEnabled = !busy\n        binding.btnAskGrok.isEnabled = !busy\n        binding.btnAskBoth.isEnabled = !busy\n        binding.btnSaveProviderKeys.isEnabled = !busy
     }
 
     override fun onDestroy() {
